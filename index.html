@@ -40,14 +40,12 @@
 <header>CATÁLOGO ANIMAL PRO</header>
 
 <div class="contenedor">
-    <div class="producto" onclick="agregar('DOS BOLSAS SEMEN MAXTER (PIETRAN)', 90000)"><img src="ima1.jpg"><div class="info-prod"><h3>DOS BOLSAS SEMEN MAXTER (PIETRAN)</h3><p>$90.000</p></div></div>
-    <div class="producto" onclick="agregar('DOS BOLSAS SEMEN MAGNUS (DUROC)', 90000)"><img src="ima2.jpg"><div class="info-prod"><h3>DOS BOLSAS SEMEN MAGNUS (DUROC)</h3><p>$90.000</p></div></div>
-<div class="producto" onclick="agregar('DOS BOLSAS SEMEN MATERNAL (LANDRACE)', 90000)"><img src="ima2.jpg"><div class="info-prod"><h3>DOS BOLSAS SEMEN MATERNAL (LANDRACE)</h3><p>$640.000</p></div></div>
-<div class="producto" onclick="agregar('DOS BOLSAS SEMEN MATERNAL (LARGE-WITHE)', 90000)"><img src="ima2.jpg"><div class="info-prod"><h3>DOS BOLSAS SEMEN MATERNAL (LARGE-WITHE)</h3><p>$640.000</p></div></div>
-    <div class="producto" onclick="agregar('2 CATETER PRIMERIZA ESPUMA', 8000)"><img src="ima3.jpg"><div class="info-prod"><h3>2 CATETER PRIMERIZA ESPUMA</h3><p>$8.000</p></div></div>
-    <div class="producto" onclick="agregar('2 CATETER MULTIPARA ESPUMA', 8000)"><img src="ima4.jpg"><div class="info-prod"><h3>2 CATETER MULTIPARA ESPUMA</h3><p>$8.000</p></div></div>
-    <div class="producto" onclick="agregar('2 CATETER MULTIPARA ESPIRAL', 8000)"><img src="ima5.jpg"><div class="info-prod"><h3>2 CATETER MULTIPARA ESPIRAL</h3><p>$8.000</p></div></div>
-    <div class="producto" onclick="agregar('2 CATETER MULTIPARA POST CERVICAL', 8000)"><img src="ima6.jpg"><div class="info-prod"><h3>2 CATETER MULTIPARA POST CERVICAL</h3><p>$8.000</p></div></div>
+    <div class="producto" onclick="agregar('PACK SEMEN MAXTER (PIETRAN)', 90000)"><img src="ima1.jpg"><div class="info-prod"><h3>PACK SEMEN MAXTER (PIETRAN)</h3><p>$90.000</p></div></div>
+    <div class="producto" onclick="agregar('PACK SEMEN MAGNUS (DUROC)', 90000)"><img src="ima2.jpg"><div class="info-prod"><h3>PACK SEMEN MAGNUS (DUROC)</h3><p>$90.000</p></div></div>
+    <div class="producto" onclick="agregar('CATETER PRIMERIZA ESPUMA', 4000)"><img src="ima3.jpg"><div class="info-prod"><h3>CATETER PRIMERIZA ESPUMA</h3><p>$4.000</p></div></div>
+    <div class="producto" onclick="agregar('CATETER MULTIPARA ESPUMA', 4000)"><img src="ima4.jpg"><div class="info-prod"><h3>CATETER MULTIPARA ESPUMA</h3><p>$4.000</p></div></div>
+    <div class="producto" onclick="agregar('CATETER MULTIPARA ESPIRAL', 4000)"><img src="ima5.jpg"><div class="info-prod"><h3>CATETER MULTIPARA ESPIRAL</h3><p>$4.000</p></div></div>
+    <div class="producto" onclick="agregar('CATETER MULTIPARA POST CERVICAL', 4000)"><img src="ima6.jpg"><div class="info-prod"><h3>CATETER MULTIPARA POST CERVICAL</h3><p>$4.000</p></div></div>
 </div>
 
 <div id="cart-bar">
@@ -87,7 +85,7 @@
     // Lógica para restringir la fecha a hoy + 2 días
     window.onload = function() {
         const today = new Date();
-        today.setDate(today.getDate() + 2); // Sumamos 2 días
+        today.setDate(today.getDate() + 0); // Sumamos 2 días
         const year = today.getFullYear();
         const month = String(today.getMonth() + 1).padStart(2, '0');
         const day = String(today.getDate()).padStart(2, '0');
@@ -156,7 +154,7 @@
             });
             
             // ANUNCIO DE CONFIRMACIÓN
-            alert("Recuerda que el pedido quedará confirmado una vez realices el pago, las dosis serán entregadas 48 horas después del pedido.");
+            alert("Recuerda que el pedido quedará confirmado una vez realices el pago, las dosis serán entregadas 24 horas después del pedido o segun disponibilidad.");
 
             // REDIRECCIONAR A WHATSAPP
             const msg = encodeURIComponent("he hecho un pedido a animal pro quiero confirmar el recibido");
