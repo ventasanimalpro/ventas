@@ -6,33 +6,55 @@
     <title>Catálogo Animal Pro</title>
     <style>
         :root { --primary: #25d366; --dark: #222; --light: #f4f7f6; --danger: #ff4d4d; }
+        
         body { font-family: 'Segoe UI', sans-serif; margin: 0; padding-bottom: 110px; background: var(--light); }
-        header { background: #1b5e20; color: white; padding: 1.5rem; text-align: center; font-weight: bold; font-size: 1.3rem; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         
-        /* Grid de productos */
-        .contenedor { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; padding: 15px; }
-        .producto { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; cursor: pointer; transition: transform 0.2s; min-height: 220px; display: flex; flex-direction: column; }
-        .producto:active { transform: scale(0.96); }
-        .producto img { width: 100%; height: 140px; object-fit: cover; display: block; background: #eee; }
+        header { background: #1b5e20; color: white; padding: 1.5rem; text-align: center; font-weight: bold; font-size: 1.3rem; }
+
+        /* MANTIENE LAS 2 COLUMNAS SIEMPRE */
+        .contenedor { 
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 10px; 
+            padding: 10px; 
+        }
         
-        .info-prod { padding: 10px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
-        .info-prod h3 { font-size: 0.85rem; margin: 5px 0; color: var(--dark); line-height: 1.2; }
-        .info-prod p { color: #1b5e20; font-weight: bold; margin: 5px 0 0 0; font-size: 1.1rem; }
+        .producto { 
+            background: white; 
+            border-radius: 10px; 
+            overflow: hidden; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+            text-align: center; 
+            cursor: pointer; 
+            display: flex; 
+            flex-direction: column;
+            width: 100%; /* Asegura que ocupe su mitad de la pantalla */
+        }
+
+        /* AJUSTE PARA IMAGEN COMPLETA */
+        .producto img { 
+            width: 100%; 
+            height: 150px; /* Altura fija para orden visual */
+            object-fit: contain; /* <--- CAMBIO CLAVE: Muestra la imagen entera sin recortar */
+            display: block; 
+            background: #ffffff; /* Fondo blanco por si la imagen es angosta */
+            padding: 5px; /* Espacio para que no toque los bordes */
+            box-sizing: border-box;
+        }
+        
+        .info-prod { padding: 8px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
+        .info-prod h3 { font-size: 0.7rem; margin: 5px 0; color: var(--dark); line-height: 1.1; text-transform: uppercase; }
+        .info-prod p { color: #1b5e20; font-weight: bold; margin: 3px 0; font-size: 0.95rem; }
 
         /* Barra Inferior */
-        #cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #ddd; display: none; justify-content: space-between; align-items: center; padding: 15px 25px; height: 90px; z-index: 100; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); }
-        .contador-texto { display: flex; flex-direction: column; font-weight: bold; color: var(--dark); }
-        .btn-terminar { background: var(--primary); color: white; border: none; padding: 18px 30px; border-radius: 15px; font-weight: 900; cursor: pointer; font-size: 1.2rem; text-transform: uppercase; box-shadow: 0 4px 12px rgba(37,211,102,0.4); }
+        #cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #ddd; display: none; justify-content: space-between; align-items: center; padding: 10px 20px; height: 90px; z-index: 100; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); }
+        .btn-terminar { background: var(--primary); color: white; border: none; padding: 18px 25px; border-radius: 15px; font-weight: 900; cursor: pointer; font-size: 1.1rem; }
 
-        /* Modal */
+        /* Formulario y Modal */
         #modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 200; }
-        .modal-content { background: white; padding: 25px; border-radius: 15px; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto; }
-        .item-resumen { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 8px; font-size: 0.9rem; }
-        .btn-del { background: var(--danger); color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
-        
-        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
-        label { font-size: 0.85rem; color: #555; margin-left: 5px; display: block; margin-top: 10px; }
-        .btn-enviar { width: 100%; background: #1b5e20; color: white; border: none; padding: 15px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 1.1rem; margin-top: 15px; }
+        .modal-content { background: white; padding: 20px; border-radius: 15px; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .btn-enviar { width: 100%; background: #1b5e20; color: white; border: none; padding: 15px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -40,41 +62,39 @@
 <header>CATÁLOGO ANIMAL PRO</header>
 
 <div class="contenedor">
-    <div class="producto" onclick="agregar('PACK SEMEN MAXTER (PIETRAN)', 90000)"><img src="ima1.jpg"><div class="info-prod"><h3>PACK SEMEN MAXTER (PIETRAN)</h3><p>$90.000</p></div></div>
-    <div class="producto" onclick="agregar('PACK SEMEN MAGNUS (DUROC)', 90000)"><img src="ima2.jpg"><div class="info-prod"><h3>PACK SEMEN MAGNUS (DUROC)</h3><p>$90.000</p></div></div>
-    <div class="producto" onclick="agregar('CATETER PRIMERIZA ESPUMA', 4000)"><img src="ima3.jpg"><div class="info-prod"><h3>CATETER PRIMERIZA ESPUMA</h3><p>$4.000</p></div></div>
-    <div class="producto" onclick="agregar('CATETER MULTIPARA ESPUMA', 4000)"><img src="ima4.jpg"><div class="info-prod"><h3>CATETER MULTIPARA ESPUMA</h3><p>$4.000</p></div></div>
-    <div class="producto" onclick="agregar('CATETER MULTIPARA ESPIRAL', 4000)"><img src="ima5.jpg"><div class="info-prod"><h3>CATETER MULTIPARA ESPIRAL</h3><p>$4.000</p></div></div>
-    <div class="producto" onclick="agregar('CATETER MULTIPARA POST CERVICAL', 4000)"><img src="ima6.jpg"><div class="info-prod"><h3>CATETER MULTIPARA POST CERVICAL</h3><p>$4.000</p></div></div>
+    <div class="producto" onclick="agregar('2 BOLSAS SEMEN MAXTER (PIETRAN)', 90000)"><img src="ima1.jpg"><div class="info-prod"><h3>2 BOLSAS SEMEN MAXTER (PIETRAN)</h3><p>$90.000</p></div></div>
+    <div class="producto" onclick="agregar('2 BOLSAS SEMEN MAGNUS (DUROC)', 90000)"><img src="ima2.jpg"><div class="info-prod"><h3>2 BOLSAS SEMEN MAGNUS (DUROC)</h3><p>$90.000</p></div></div>
+    <div class="producto" onclick="agregar('2 BOLSAS SEMEN MATERNAL (LANDRACE)', 640000)"><img src="ima2.jpg"><div class="info-prod"><h3>2 BOLSAS SEMEN MATERNAL (LANDRACE)</h3><p>$640.000</p></div></div>
+    <div class="producto" onclick="agregar('2 BOLSAS SEMEN MATERNAL (LARGE-WHITE)', 640000)"><img src="ima2.jpg"><div class="info-prod"><h3>2 BOLSAS SEMEN MATERNAL (LARGE-WHITE)</h3><p>$640.000</p></div></div>
+    <div class="producto" onclick="agregar('2 CATETER PRIMERIZA ESPUMA', 8000)"><img src="ima3.jpg"><div class="info-prod"><h3>CATETER PRIMERIZA ESPUMA</h3><p>$8.000</p></div></div>
+    <div class="producto" onclick="agregar('2 CATETER MULTIPARA ESPUMA', 8000)"><img src="ima4.jpg"><div class="info-prod"><h3>CATETER MULTIPARA ESPUMA</h3><p>$8.000</p></div></div>
+    <div class="producto" onclick="agregar('2 CATETER MULTIPARA ESPIRAL', 8000)"><img src="ima5.jpg"><div class="info-prod"><h3>CATETER MULTIPARA ESPIRAL</h3><p>$8.000</p></div></div>
+    <div class="producto" onclick="agregar('2 CATETER MULTIPARA POST CERVICAL', 8000)"><img src="ima6.jpg"><div class="info-prod"><h3>CATETER MULTIPARA POST CERVICAL</h3><p>$8.000</p></div></div>
+    <div class="producto" onclick="agregar('CAVA DE ICOPOR CON PILAS DE HIELO', 15000)"><img src="ima8.jpg"><div class="info-prod"><h3>CAVA DE ICOPOR CON PILAS DE HIELO</h3><p>$15.000</p></div></div>
+    <div class="producto" onclick="agregar('DOMICILIO TERMINAL CUCUTA', 10000)"><img src="ima7.jpg"><div class="info-prod"><h3>DOMICILIO TERMINAL CUCUTA</h3><p>$10.000</p></div></div>
+    <div class="producto" onclick="agregar('DOMICILIO LA PARADA', 20000)"><img src="ima7.jpg"><div class="info-prod"><h3>DOMICILIO LA PARADA</h3><p>$20.000</p></div></div>
 </div>
 
 <div id="cart-bar">
-    <div class="contador-texto">
-        <small style="color: gray; font-weight: normal;">Llevas:</small>
-        <span>🛒 <span id="contador">0</span> artículos</span>
-    </div>
+    <div style="font-weight: bold;">🛒 <span id="contador">0</span> artículos</div>
     <button class="btn-terminar" onclick="abrirFormulario()">TERMINAR PEDIDO</button>
 </div>
 
 <div id="modal">
     <div class="modal-content">
-        <h2 style="margin-top:0">Resumen del Pedido</h2>
+        <h2 style="margin-top:0">Tu Pedido</h2>
         <div id="lista-resumen"></div>
-        <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
-        
-        <input type="text" id="nombre" placeholder="Nombre completo" required>
-        <input type="tel" id="telefono" placeholder="WhatsApp" required>
-        
-        <label for="fechaRecogida">Fecha para recoger (mínimo 48h):</label>
-        <input type="date" id="fechaRecogida" required>
-        
+        <hr>
+        <input type="text" id="nombre" placeholder="Nombre completo">
+        <input type="tel" id="telefono" placeholder="WhatsApp">
+        <label style="font-size:0.8rem; color:gray;">Fecha para recoger (mínimo 48h):</label>
+        <input type="date" id="fechaRecogida">
         <select id="pago">
             <option value="Efectivo">Efectivo</option>
             <option value="Transferencia">Transferencia</option>
         </select>
-        
         <button class="btn-enviar" id="btnEnviar" onclick="enviarPedido()">ENVIAR PEDIDO</button>
-        <button style="background:none; border:none; color:grey; width:100%; margin-top:10px; cursor:pointer;" onclick="cerrarFormulario()">Seguir comprando</button>
+        <button style="background:none; border:none; color:grey; width:100%; margin-top:10px;" onclick="cerrarFormulario()">Cancelar</button>
     </div>
 </div>
 
@@ -82,14 +102,10 @@
     const WEB_APP_URL ="https://script.google.com/macros/s/AKfycbxX6BfjcxhQRWlGFXGFDL7yxk2ZazUYZj37gwH61iknxc4qAmIecC1sFsMkex-FIvA_/exec"; 
     let carrito = [];
 
-    // Lógica para restringir la fecha a hoy + 2 días
     window.onload = function() {
         const today = new Date();
-        today.setDate(today.getDate() + 0); // Sumamos 2 días
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        const minDate = `${year}-${month}-${day}`;
+        today.setDate(today.getDate() + 2);
+        const minDate = today.toISOString().split('T')[0];
         document.getElementById('fechaRecogida').setAttribute('min', minDate);
     };
 
@@ -100,16 +116,8 @@
 
     function actualizarUI() {
         const bar = document.getElementById('cart-bar');
-        const cont = document.getElementById('contador');
-        cont.innerText = carrito.length;
+        document.getElementById('contador').innerText = carrito.length;
         bar.style.display = carrito.length > 0 ? 'flex' : 'none';
-    }
-
-    function eliminar(index) {
-        carrito.splice(index, 1);
-        if (carrito.length === 0) cerrarFormulario();
-        else abrirFormulario();
-        actualizarUI();
     }
 
     function abrirFormulario() {
@@ -118,50 +126,49 @@
         let total = 0;
         carrito.forEach((item, index) => {
             total += item.precio;
-            lista.innerHTML += `<div class="item-resumen"><span>${item.nombre}</span><div>$${item.precio.toLocaleString()} <button class="btn-del" onclick="eliminar(${index})">✕</button></div></div>`;
+            lista.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.85rem;">
+                <span>${item.nombre}</span>
+                <span>$${item.precio.toLocaleString()} <button onclick="eliminar(${index})" style="color:red; border:none; background:none;">✕</button></span>
+            </div>`;
         });
-        lista.innerHTML += `<div style="text-align:right; font-weight:bold; margin-top:10px; font-size:1.1rem;">Total: $${total.toLocaleString()}</div>`;
+        lista.innerHTML += `<div style="text-align:right; font-weight:bold; margin-top:10px;">Total: $${total.toLocaleString()}</div>`;
         document.getElementById('modal').style.display = 'flex';
+    }
+
+    function eliminar(idx) {
+        carrito.splice(idx, 1);
+        carrito.length === 0 ? cerrarFormulario() : abrirFormulario();
+        actualizarUI();
     }
 
     function cerrarFormulario() { document.getElementById('modal').style.display = 'none'; }
 
     async function enviarPedido() {
-        const nombre = document.getElementById('nombre').value;
-        const telefono = document.getElementById('telefono').value;
-        const fecha = document.getElementById('fechaRecogida').value;
-        const pago = document.getElementById('pago').value;
+        const n = document.getElementById('nombre').value;
+        const t = document.getElementById('telefono').value;
+        const f = document.getElementById('fechaRecogida').value;
+        const p = document.getElementById('pago').value;
+
+        if (!n || !t || !f) return alert("Completa todos los datos");
+
         const btn = document.getElementById('btnEnviar');
-
-        if (!nombre || !telefono || !fecha) return alert("Por favor, completa todos los datos.");
-
         btn.innerText = "Enviando...";
         btn.disabled = true;
-
-        const datos = { 
-            nombre: nombre, 
-            telefono: telefono, 
-            fecha: fecha,
-            pago: pago, 
-            items: carrito.map(i => i.nombre).join(", ") 
-        };
 
         try {
             await fetch(WEB_APP_URL, {
                 method: "POST",
                 mode: "no-cors",
-                body: JSON.stringify(datos)
+                body: JSON.stringify({ nombre: n, telefono: t, fecha: f, pago: p, items: carrito.map(i => i.nombre).join(", ") })
             });
             
-            // ANUNCIO DE CONFIRMACIÓN
-            alert("Recuerda que el pedido quedará confirmado una vez realices el pago, las dosis serán entregadas 24 horas después del pedido o segun disponibilidad.");
-
-            // REDIRECCIONAR A WHATSAPP
-            const msg = encodeURIComponent("he hecho un pedido a animal pro quiero confirmar el recibido");
+            alert("Recuerda que el pedido quedará confirmado una vez realices el pago, las dosis serán entregadas 24 horas después del pedido o segun disponibilidad, si pides maternal la entrega se realiza en 48 horas.");
+            
+            const msg = encodeURIComponent("He hecho un pedido a Animal Pro y quiero confirmar el recibido.");
             window.location.href = `https://wa.me/573012324030?text=${msg}`;
 
-        } catch (error) {
-            alert("Error al enviar. Revisa tu conexión.");
+        } catch (e) {
+            alert("Error al enviar");
             btn.innerText = "ENVIAR PEDIDO";
             btn.disabled = false;
         }
