@@ -11,7 +11,6 @@
         
         header { background: #1b5e20; color: white; padding: 1.5rem; text-align: center; font-weight: bold; font-size: 1.3rem; }
 
-        /* MANTIENE LAS 2 COLUMNAS SIEMPRE */
         .contenedor { 
             display: grid; 
             grid-template-columns: repeat(2, 1fr); 
@@ -28,17 +27,33 @@
             cursor: pointer; 
             display: flex; 
             flex-direction: column;
-            width: 100%; /* Asegura que ocupe su mitad de la pantalla */
+            width: 100%;
+            position: relative; /* Necesario para que el badge flote */
         }
 
-        /* AJUSTE PARA IMAGEN COMPLETA */
+        /* BURBUJA ROJA DE CANTIDAD */
+        .badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: var(--danger);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 50%;
+            font-size: 0.75rem;
+            font-weight: bold;
+            display: none; /* Se oculta si es 0 */
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
         .producto img { 
             width: 100%; 
-            height: 150px; /* Altura fija para orden visual */
-            object-fit: contain; /* <--- CAMBIO CLAVE: Muestra la imagen entera sin recortar */
+            height: 150px; 
+            object-fit: contain; 
             display: block; 
-            background: #ffffff; /* Fondo blanco por si la imagen es angosta */
-            padding: 5px; /* Espacio para que no toque los bordes */
+            background: #ffffff; 
+            padding: 5px; 
             box-sizing: border-box;
         }
         
@@ -46,11 +61,9 @@
         .info-prod h3 { font-size: 0.7rem; margin: 5px 0; color: var(--dark); line-height: 1.1; text-transform: uppercase; }
         .info-prod p { color: #1b5e20; font-weight: bold; margin: 3px 0; font-size: 0.95rem; }
 
-        /* Barra Inferior */
         #cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #ddd; display: none; justify-content: space-between; align-items: center; padding: 10px 20px; height: 90px; z-index: 100; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); }
         .btn-terminar { background: var(--primary); color: white; border: none; padding: 18px 25px; border-radius: 15px; font-weight: 900; cursor: pointer; font-size: 1.1rem; }
 
-        /* Formulario y Modal */
         #modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 200; }
         .modal-content { background: white; padding: 20px; border-radius: 15px; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto; }
         input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
@@ -62,17 +75,71 @@
 <header>CATÁLOGO ANIMAL PRO</header>
 
 <div class="contenedor">
-    <div class="producto" onclick="agregar('2 BOLSAS SEMEN MAXTER (PIETRAN)', 90000)"><img src="ima1.jpg"><div class="info-prod"><h3>2 BOLSAS SEMEN MAXTER (PIETRAN)</h3><p>$90.000</p></div></div>
-    <div class="producto" onclick="agregar('2 BOLSAS SEMEN MAGNUS (DUROC)', 90000)"><img src="ima2.jpg"><div class="info-prod"><h3>2 BOLSAS SEMEN MAGNUS (DUROC)</h3><p>$90.000</p></div></div>
-    <div class="producto" onclick="agregar('2 BOLSAS SEMEN MATERNAL (LANDRACE)', 640000)"><img src="ima2.jpg"><div class="info-prod"><h3>2 BOLSAS SEMEN MATERNAL (LANDRACE)</h3><p>$640.000</p></div></div>
-    <div class="producto" onclick="agregar('2 BOLSAS SEMEN MATERNAL (LARGE-WHITE)', 640000)"><img src="ima2.jpg"><div class="info-prod"><h3>2 BOLSAS SEMEN MATERNAL (LARGE-WHITE)</h3><p>$640.000</p></div></div>
-    <div class="producto" onclick="agregar('2 CATETER PRIMERIZA ESPUMA', 8000)"><img src="ima3.jpg"><div class="info-prod"><h3>2 CATETER PRIMERIZA ESPUMA</h3><p>$8.000</p></div></div>
-    <div class="producto" onclick="agregar('2 CATETER MULTIPARA ESPUMA', 8000)"><img src="ima4.jpg"><div class="info-prod"><h3>2 CATETER MULTIPARA ESPUMA</h3><p>$8.000</p></div></div>
-    <div class="producto" onclick="agregar('2 CATETER MULTIPARA ESPIRAL', 8000)"><img src="ima5.jpg"><div class="info-prod"><h3>2 CATETER MULTIPARA ESPIRAL</h3><p>$8.000</p></div></div>
-    <div class="producto" onclick="agregar('2 CATETER MULTIPARA POST CERVICAL', 8000)"><img src="ima6.jpg"><div class="info-prod"><h3>2 CATETER MULTIPARA POST CERVICAL</h3><p>$8.000</p></div></div>
-    <div class="producto" onclick="agregar('CAVA DE ICOPOR CON PILAS DE HIELO', 15000)"><img src="ima8.jpg"><div class="info-prod"><h3>CAVA DE ICOPOR CON PILAS DE HIELO</h3><p>$15.000</p></div></div>
-    <div class="producto" onclick="agregar('DOMICILIO TERMINAL CUCUTA', 10000)"><img src="ima7.jpg"><div class="info-prod"><h3>DOMICILIO TERMINAL CUCUTA</h3><p>$10.000</p></div></div>
-    <div class="producto" onclick="agregar('DOMICILIO LA PARADA', 20000)"><img src="ima7.jpg"><div class="info-prod"><h3>DOMICILIO LA PARADA</h3><p>$20.000</p></div></div>
+    <div class="producto" onclick="agregar('2 BOLSAS SEMEN MAXTER (PIETRAN)', 90000)" data-nombre="2 BOLSAS SEMEN MAXTER (PIETRAN)">
+        <span class="badge">0</span>
+        <img src="ima1.jpg">
+        <div class="info-prod"><h3>2 BOLSAS SEMEN MAXTER (PIETRAN)</h3><p>$90.000</p></div>
+    </div>
+
+    <div class="producto" onclick="agregar('2 BOLSAS SEMEN MAGNUS (DUROC)', 90000)" data-nombre="2 BOLSAS SEMEN MAGNUS (DUROC)">
+        <span class="badge">0</span>
+        <img src="ima2.jpg">
+        <div class="info-prod"><h3>2 BOLSAS SEMEN MAGNUS (DUROC)</h3><p>$90.000</p></div>
+    </div>
+
+    <div class="producto" onclick="agregar('2 BOLSAS SEMEN MATERNAL (LANDRACE)', 640000)" data-nombre="2 BOLSAS SEMEN MATERNAL (LANDRACE)">
+        <span class="badge">0</span>
+        <img src="ima2.jpg">
+        <div class="info-prod"><h3>2 BOLSAS SEMEN MATERNAL (LANDRACE)</h3><p>$640.000</p></div>
+    </div>
+
+    <div class="producto" onclick="agregar('2 BOLSAS SEMEN MATERNAL (LARGE-WHITE)', 640000)" data-nombre="2 BOLSAS SEMEN MATERNAL (LARGE-WHITE)">
+        <span class="badge">0</span>
+        <img src="ima2.jpg">
+        <div class="info-prod"><h3>2 BOLSAS SEMEN MATERNAL (LARGE-WHITE)</h3><p>$640.000</p></div>
+    </div>
+
+    <div class="producto" onclick="agregar('2 CATETER PRIMERIZA ESPUMA', 8000)" data-nombre="2 CATETER PRIMERIZA ESPUMA">
+        <span class="badge">0</span>
+        <img src="ima3.jpg">
+        <div class="info-prod"><h3>CATETER PRIMERIZA ESPUMA</h3><p>$8.000</p></div>
+    </div>
+
+    <div class="producto" onclick="agregar('2 CATETER MULTIPARA ESPUMA', 8000)" data-nombre="2 CATETER MULTIPARA ESPUMA">
+        <span class="badge">0</span>
+        <img src="ima4.jpg">
+        <div class="info-prod"><h3>CATETER MULTIPARA ESPUMA</h3><p>$8.000</p></div>
+    </div>
+
+    <div class="producto" onclick="agregar('2 CATETER MULTIPARA ESPIRAL', 8000)" data-nombre="2 CATETER MULTIPARA ESPIRAL">
+        <span class="badge">0</span>
+        <img src="ima5.jpg">
+        <div class="info-prod"><h3>CATETER MULTIPARA ESPIRAL</h3><p>$8.000</p></div>
+    </div>
+
+    <div class="producto" onclick="agregar('2 CATETER MULTIPARA POST CERVICAL', 8000)" data-nombre="2 CATETER MULTIPARA POST CERVICAL">
+        <span class="badge">0</span>
+        <img src="ima6.jpg">
+        <div class="info-prod"><h3>CATETER MULTIPARA POST CERVICAL</h3><p>$8.000</p></div>
+    </div>
+
+    <div class="producto" onclick="agregar('CAVA DE ICOPOR CON PILAS DE HIELO', 15000)" data-nombre="CAVA DE ICOPOR CON PILAS DE HIELO">
+        <span class="badge">0</span>
+        <img src="ima8.jpg">
+        <div class="info-prod"><h3>CAVA DE ICOPOR CON PILAS DE HIELO</h3><p>$15.000</p></div>
+    </div>
+
+    <div class="producto" onclick="agregar('DOMICILIO TERMINAL CUCUTA', 10000)" data-nombre="DOMICILIO TERMINAL CUCUTA">
+        <span class="badge">0</span>
+        <img src="ima7.jpg">
+        <div class="info-prod"><h3>DOMICILIO TERMINAL CUCUTA</h3><p>$10.000</p></div>
+    </div>
+
+    <div class="producto" onclick="agregar('DOMICILIO LA PARADA', 20000)" data-nombre="DOMICILIO LA PARADA">
+        <span class="badge">0</span>
+        <img src="ima7.jpg">
+        <div class="info-prod"><h3>DOMICILIO LA PARADA</h3><p>$20.000</p></div>
+    </div>
 </div>
 
 <div id="cart-bar">
@@ -104,7 +171,7 @@
 
     window.onload = function() {
         const today = new Date();
-        today.setDate(today.getDate() + 0);
+        today.setDate(today.getDate() + 2); // Mantengo el +2 para logística
         const minDate = today.toISOString().split('T')[0];
         document.getElementById('fechaRecogida').setAttribute('min', minDate);
     };
@@ -115,9 +182,31 @@
     }
 
     function actualizarUI() {
+        // 1. Actualizar barra inferior
         const bar = document.getElementById('cart-bar');
         document.getElementById('contador').innerText = carrito.length;
         bar.style.display = carrito.length > 0 ? 'flex' : 'none';
+
+        // 2. Contar cantidades para los badges rojos
+        const conteo = {};
+        carrito.forEach(prod => {
+            conteo[prod.nombre] = (conteo[prod.nombre] || 0) + 1;
+        });
+
+        // 3. Actualizar todos los badges en la pantalla
+        const productosHTML = document.querySelectorAll('.producto');
+        productosHTML.forEach(div => {
+            const nombreProd = div.getAttribute('data-nombre');
+            const badge = div.querySelector('.badge');
+            const cantidad = conteo[nombreProd] || 0;
+
+            if (cantidad > 0) {
+                badge.innerText = cantidad;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+        });
     }
 
     function abrirFormulario() {
@@ -162,7 +251,7 @@
                 body: JSON.stringify({ nombre: n, telefono: t, fecha: f, pago: p, items: carrito.map(i => i.nombre).join(", ") })
             });
             
-            alert("Recuerda que el pedido quedará confirmado una vez realices el pago, las dosis serán entregadas 24 horas después del pedido o segun disponibilidad, si pides maternal la entrega se realiza en 48 horas.");
+            alert("Recuerda que el pedido quedará confirmado una vez realices el pago, las dosis serán entregadas 24 horas después del pedido o según disponibilidad, si pides maternal la entrega se realiza en 48 horas.");
             
             const msg = encodeURIComponent("He hecho un pedido a Animal Pro y quiero confirmar el recibido.");
             window.location.href = `https://wa.me/573012324030?text=${msg}`;
