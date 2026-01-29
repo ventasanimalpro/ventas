@@ -166,7 +166,7 @@
 </div>
 
 <script>
-    // RECUERDA ACTUALIZAR ESTA URL CON TU NUEVA IMPLEMENTACIÓN
+    // URL DE TU GOOGLE APPS SCRIPT
     const WEB_APP_URL ="https://script.google.com/macros/s/AKfycbzbg9gEQB5M60XGE2rs-bo6obIG_z6nD4t66xgeBCf7vJN4URZo89O7-ojJQiQxxZGP/exec"; 
     let carrito = [];
 
@@ -230,11 +230,19 @@
         const f = document.getElementById('fechaRecogida').value;
         const p = document.getElementById('pago').value;
 
-        if (!n || !t || !f) return alert("Completa todos los datos");
+        if (!n || !t || !f) return alert("Por favor, completa todos los campos del formulario.");
 
         const btn = document.getElementById('btnEnviar');
         btn.innerText = "⏳ REGISTRANDO PEDIDO...";
         btn.disabled = true;
+
+        // Preparamos resumen para WhatsApp y datos para Google
+        let total = 0;
+        let resumenTexto = "";
+        carrito.forEach(item => {
+            total += item.precio;
+            resumenTexto += `- ${item.nombre} ($${item.precio.toLocaleString()})\n`;
+        });
 
         const pedidoData = { 
             nombre: n, 
@@ -245,26 +253,36 @@
         };
 
         try {
-            // Eliminamos "no-cors" para poder esperar a que el script termine de verdad
+            // 1. Enviamos a Google Apps Script
             await fetch(WEB_APP_URL, {
                 method: "POST",
                 mode: "no-cors", 
                 body: JSON.stringify(pedidoData)
             });
 
-            // Agregamos una pequeña pausa de 2 segundos para asegurar que Google procese el correo
-            // (Ya que no-cors no nos avisa exactamente cuándo termina)
+            // 2. Pequeña espera para asegurar procesamiento del servidor
             await new Promise(resolve => setTimeout(resolve, 2000));
 
-            alert("✅ Pedido registrado en sistema.\n\nIMPORTANTE: El pedido se confirmará una vez realices el pago. Las dosis se entregan 24-48 horas después.");
+            alert("✅ Pedido registrado con éxito en nuestro sistema.\n\nHaga clic en Aceptar para enviar el detalle por WhatsApp.");
             
-            const msg = encodeURIComponent("Hola Animal Pro, he realizado un pedido a nombre de " + n + ". Quiero confirmar el recibido.");
-            window.location.href = `https://wa.me/573012324030?text=${msg}`;
+            // 3. Construimos el mensaje de WhatsApp
+            const mensajeWA = `*NUEVO PEDIDO - ANIMAL PRO* 🐷\n\n` +
+                              `*Cliente:* ${n}\n` +
+                              `*WhatsApp:* ${t}\n` +
+                              `*Fecha Recogida:* ${f}\n` +
+                              `*Método Pago:* ${p}\n\n` +
+                              `*PRODUCTOS:* \n${resumenTexto}\n` +
+                              `*TOTAL A PAGAR: $${total.toLocaleString()}*\n\n` +
+                              `_Confirmar recibido por favor._`;
+
+            const urlWA = `https://wa.me/573012324030?text=${encodeURIComponent(mensajeWA)}`;
+            
+            // 4. Redirección final
+            window.location.href = urlWA;
 
         } catch (e) {
-            alert("Error al conectar con el servidor. Se intentará abrir WhatsApp directamente.");
-            const msg = encodeURIComponent("Hola Animal Pro, tuve un error en el sistema pero quiero hacer un pedido.");
-            window.location.href = `https://wa.me/573012324030?text=${msg}`;
+            alert("Hubo un error de conexión, pero abriremos WhatsApp para procesar su pedido manualmente.");
+            window.location.href = `https://wa.me/573012324030?text=Hola, quiero hacer un pedido de: ${pedidoData.items}`;
         }
     }
 </script>
