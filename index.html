@@ -16,7 +16,7 @@
         
         body { font-family: 'Segoe UI', sans-serif; margin: 0; padding-bottom: 110px; background: var(--light); }
         
-        /* Estilos Ventana Emergente de Aviso (Nuevo) */
+        /* Estilos Ventana Emergente de Aviso */
         #modal-aviso { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.85); display: none; justify-content: center; 
@@ -140,7 +140,6 @@
             const res = await fetch(WEB_APP_URL + "?getSettings=1");
             const data = await res.json();
             
-            // Si hay un mensaje, lo mostramos en el MODAL emergente
             if(data.mensaje && data.mensaje.trim() !== "") {
                 document.getElementById('texto-aviso').innerText = data.mensaje;
                 document.getElementById('modal-aviso').style.display = 'flex';
@@ -150,14 +149,23 @@
             const labelFecha = document.getElementById('label-fecha');
             labelFecha.innerText = diasMinimosGlobal === 0 ? 
                 "¡Disponible para hoy mismo!:" : 
-                `Fecha para recoger (mínimo ${diasMinimosGlobal}h):`;
+                `Fecha para recoger (mínimo ${diasMinimosGlobal} día(s)):`;
 
         } catch (e) { console.error("Error cargando ajustes."); }
 
+        // --- LÓGICA DE FECHA CORREGIDA ---
         const fechaInput = document.getElementById('fechaRecogida');
         const hoy = new Date();
-        hoy.setHours(hoy.getHours() + diasMinimosGlobal);
-        const minDate = hoy.toISOString().split('T')[0];
+        
+        // Sumamos los días exactos en lugar de horas para que el calendario lo reconozca bien
+        hoy.setDate(hoy.getDate() + diasMinimosGlobal);
+        
+        // Ajustamos al formato YYYY-MM-DD local
+        const anio = hoy.getFullYear();
+        const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+        const dia = String(hoy.getDate()).padStart(2, '0');
+        const minDate = `${anio}-${mes}-${dia}`;
+
         fechaInput.setAttribute('min', minDate);
         fechaInput.value = minDate;
     };
