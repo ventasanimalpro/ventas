@@ -5,140 +5,105 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Catálogo Animal Pro</title>
     <style>
-        :root { --primary: #25d366; --dark: #222; --light: #f4f7f6; --danger: #ff4d4d; }
+        :root { 
+            --primary: #25d366; 
+            --dark: #121212; 
+            --card-bg: #ffffff;
+            --light: #f4f7f6; 
+            --danger: #ff4d4d;
+            --accent: #1b5e20;
+        }
         
         body { font-family: 'Segoe UI', sans-serif; margin: 0; padding-bottom: 110px; background: var(--light); }
         
-        header { background: #1b5e20; color: white; padding: 1.5rem; text-align: center; font-weight: bold; font-size: 1.3rem; }
-
-        .contenedor { 
-            display: grid; 
-            grid-template-columns: repeat(2, 1fr); 
-            gap: 10px; 
-            padding: 10px; 
+        /* Estilos Ventana Emergente de Aviso (Nuevo) */
+        #modal-aviso { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); display: none; justify-content: center; 
+            align-items: center; z-index: 3000; backdrop-filter: blur(5px);
         }
-        
+        .aviso-content { 
+            background: white; padding: 30px; border-radius: 20px; 
+            width: 85%; max-width: 350px; text-align: center; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+        .aviso-content h2 { color: var(--accent); margin-top: 0; font-size: 1.4rem; }
+        .aviso-content p { color: #444; line-height: 1.5; font-size: 1.1rem; margin: 20px 0; }
+        .btn-aviso-ok { 
+            background: var(--primary); color: white; border: none; 
+            padding: 12px 40px; border-radius: 10px; font-weight: bold; 
+            cursor: pointer; width: 100%; font-size: 1rem;
+        }
+
+        /* Estilos Generales */
+        header { background: var(--accent); color: white; padding: 1.5rem; text-align: center; font-weight: bold; font-size: 1.3rem; }
+        .contenedor { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 12px; }
         .producto { 
-            background: white; 
-            border-radius: 10px; 
-            overflow: hidden; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
-            text-align: center; 
-            cursor: pointer; 
-            display: flex; 
-            flex-direction: column;
-            width: 100%;
-            position: relative; 
+            background: var(--card-bg); border-radius: 12px; overflow: hidden; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08); text-align: center; 
+            cursor: pointer; position: relative; transition: transform 0.2s;
         }
+        .producto:active { transform: scale(0.97); }
+        .badge { position: absolute; top: 8px; right: 8px; background: var(--danger); color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; display: none; z-index: 10; }
+        .producto img { width: 100%; height: 150px; object-fit: contain; background: #fff; padding: 5px; box-sizing: border-box; }
+        .info-prod { padding: 10px; flex-grow: 1; }
+        .info-prod h3 { font-size: 0.75rem; margin: 5px 0; color: #333; text-transform: uppercase; }
+        .info-prod p { color: var(--accent); font-weight: bold; font-size: 1rem; }
 
-        .badge {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background-color: var(--danger);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 50%;
-            font-size: 0.75rem;
-            font-weight: bold;
-            display: none; 
-            z-index: 10;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
+        #cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #ddd; display: none; justify-content: space-between; align-items: center; padding: 15px 25px; height: 90px; z-index: 100; }
+        .btn-terminar { background: var(--primary); color: white; border: none; padding: 18px 30px; border-radius: 15px; font-weight: 900; cursor: pointer; font-size: 1.1rem; }
 
-        .producto img { 
-            width: 100%; 
-            height: 150px; 
-            object-fit: contain; 
-            display: block; 
-            background: #ffffff; 
-            padding: 5px; 
-            box-sizing: border-box;
-        }
-        
-        .info-prod { padding: 8px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
-        .info-prod h3 { font-size: 0.7rem; margin: 5px 0; color: var(--dark); line-height: 1.1; text-transform: uppercase; }
-        .info-prod p { color: #1b5e20; font-weight: bold; margin: 3px 0; font-size: 0.95rem; }
-
-        #cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #ddd; display: none; justify-content: space-between; align-items: center; padding: 10px 20px; height: 90px; z-index: 100; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); }
-        .btn-terminar { background: var(--primary); color: white; border: none; padding: 18px 25px; border-radius: 15px; font-weight: 900; cursor: pointer; font-size: 1.1rem; }
-
-        #modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 200; }
-        .modal-content { background: white; padding: 20px; border-radius: 15px; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto; }
-        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        .btn-enviar { width: 100%; background: #1b5e20; color: white; border: none; padding: 15px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 10px; }
-        .btn-enviar:disabled { background: #ccc; cursor: not-allowed; }
+        #modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 200; }
+        .modal-content { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto; }
+        input, select { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid #eee; background: #f9f9f9; border-radius: 10px; box-sizing: border-box; }
+        .btn-enviar { width: 100%; background: var(--accent); color: white; border: none; padding: 16px; font-weight: bold; border-radius: 10px; cursor: pointer; margin-top: 15px; }
     </style>
 </head>
 <body>
+
+<div id="modal-aviso">
+    <div class="aviso-content">
+        <h2>📢 Aviso Importante</h2>
+        <p id="texto-aviso"></p>
+        <button class="btn-aviso-ok" onclick="cerrarAviso()">ENTENDIDO</button>
+    </div>
+</div>
 
 <header>CATÁLOGO ANIMAL PRO</header>
 
 <div class="contenedor">
     <div class="producto" onclick="agregar('2 BOLSAS SEMEN MAXTER (PIETRAN)', 90000)" data-nombre="2 BOLSAS SEMEN MAXTER (PIETRAN)">
-        <span class="badge">0</span>
-        <img src="ima1.jpg">
-        <div class="info-prod"><h3>2 BOLSAS SEMEN MAXTER (PIETRAN)</h3><p>$90.000</p></div>
+        <span class="badge">0</span><img src="ima1.jpg"><div class="info-prod"><h3>2 BOLSAS SEMEN MAXTER (PIETRAN)</h3><p>$90.000</p></div>
     </div>
-
     <div class="producto" onclick="agregar('2 BOLSAS SEMEN MAGNUS (DUROC)', 90000)" data-nombre="2 BOLSAS SEMEN MAGNUS (DUROC)">
-        <span class="badge">0</span>
-        <img src="ima2.jpg">
-        <div class="info-prod"><h3>2 BOLSAS SEMEN MAGNUS (DUROC)</h3><p>$90.000</p></div>
+        <span class="badge">0</span><img src="ima2.jpg"><div class="info-prod"><h3>2 BOLSAS SEMEN MAGNUS (DUROC)</h3><p>$90.000</p></div>
     </div>
-
     <div class="producto" onclick="agregar('2 BOLSAS SEMEN MATERNAL (LANDRACE)', 640000)" data-nombre="2 BOLSAS SEMEN MATERNAL (LANDRACE)">
-        <span class="badge">0</span>
-        <img src="ima2.jpg">
-        <div class="info-prod"><h3>2 BOLSAS SEMEN MATERNAL (LANDRACE)</h3><p>$640.000</p></div>
+        <span class="badge">0</span><img src="ima2.jpg"><div class="info-prod"><h3>2 BOLSAS SEMEN MATERNAL (LANDRACE)</h3><p>$640.000</p></div>
     </div>
-
     <div class="producto" onclick="agregar('2 BOLSAS SEMEN MATERNAL (LARGE-WHITE)', 640000)" data-nombre="2 BOLSAS SEMEN MATERNAL (LARGE-WHITE)">
-        <span class="badge">0</span>
-        <img src="ima2.jpg">
-        <div class="info-prod"><h3>2 BOLSAS SEMEN MATERNAL (LARGE-WHITE)</h3><p>$640.000</p></div>
+        <span class="badge">0</span><img src="ima2.jpg"><div class="info-prod"><h3>2 BOLSAS SEMEN MATERNAL (LARGE-WHITE)</h3><p>$640.000</p></div>
     </div>
-
     <div class="producto" onclick="agregar('2 CATETER PRIMERIZA ESPUMA', 8000)" data-nombre="2 CATETER PRIMERIZA ESPUMA">
-        <span class="badge">0</span>
-        <img src="ima3.jpg">
-        <div class="info-prod"><h3>2 CATETER PRIMERIZA ESPUMA</h3><p>$8.000</p></div>
+        <span class="badge">0</span><img src="ima3.jpg"><div class="info-prod"><h3>2 CATETER PRIMERIZA ESPUMA</h3><p>$8.000</p></div>
     </div>
-
     <div class="producto" onclick="agregar('2 CATETER MULTIPARA ESPUMA', 8000)" data-nombre="2 CATETER MULTIPARA ESPUMA">
-        <span class="badge">0</span>
-        <img src="ima4.jpg">
-        <div class="info-prod"><h3>2 CATETER MULTIPARA ESPUMA</h3><p>$8.000</p></div>
+        <span class="badge">0</span><img src="ima4.jpg"><div class="info-prod"><h3>2 CATETER MULTIPARA ESPUMA</h3><p>$8.000</p></div>
     </div>
-
     <div class="producto" onclick="agregar('2 CATETER MULTIPARA ESPIRAL', 8000)" data-nombre="2 CATETER MULTIPARA ESPIRAL">
-        <span class="badge">0</span>
-        <img src="ima5.jpg">
-        <div class="info-prod"><h3>2 CATETER MULTIPARA ESPIRAL</h3><p>$8.000</p></div>
+        <span class="badge">0</span><img src="ima5.jpg"><div class="info-prod"><h3>2 CATETER MULTIPARA ESPIRAL</h3><p>$8.000</p></div>
     </div>
-
     <div class="producto" onclick="agregar('2 CATETER MULTIPARA POST CERVICAL', 8000)" data-nombre="2 CATETER MULTIPARA POST CERVICAL">
-        <span class="badge">0</span>
-        <img src="ima6.jpg">
-        <div class="info-prod"><h3>2 CATETER MULTIPARA POST CERVICAL</h3><p>$8.000</p></div>
+        <span class="badge">0</span><img src="ima6.jpg"><div class="info-prod"><h3>2 CATETER MULTIPARA POST CERVICAL</h3><p>$8.000</p></div>
     </div>
-
     <div class="producto" onclick="agregar('CAVA DE ICOPOR CON PILAS DE HIELO', 15000)" data-nombre="CAVA DE ICOPOR CON PILAS DE HIELO">
-        <span class="badge">0</span>
-        <img src="ima8.jpg">
-        <div class="info-prod"><h3>CAVA DE ICOPOR CON PILAS DE HIELO</h3><p>$15.000</p></div>
+        <span class="badge">0</span><img src="ima8.jpg"><div class="info-prod"><h3>CAVA DE ICOPOR CON PILAS DE HIELO</h3><p>$15.000</p></div>
     </div>
-
     <div class="producto" onclick="agregar('DOMICILIO TERMINAL CUCUTA', 10000)" data-nombre="DOMICILIO TERMINAL CUCUTA">
-        <span class="badge">0</span>
-        <img src="ima7.jpg">
-        <div class="info-prod"><h3>DOMICILIO TERMINAL CUCUTA</h3><p>$10.000</p></div>
+        <span class="badge">0</span><img src="ima7.jpg"><div class="info-prod"><h3>DOMICILIO TERMINAL CUCUTA</h3><p>$10.000</p></div>
     </div>
-
     <div class="producto" onclick="agregar('DOMICILIO LA PARADA', 20000)" data-nombre="DOMICILIO LA PARADA">
-        <span class="badge">0</span>
-        <img src="ima7.jpg">
-        <div class="info-prod"><h3>DOMICILIO LA PARADA</h3><p>$20.000</p></div>
+        <span class="badge">0</span><img src="ima7.jpg"><div class="info-prod"><h3>DOMICILIO LA PARADA</h3><p>$20.000</p></div>
     </div>
 </div>
 
@@ -154,27 +119,50 @@
         <hr>
         <input type="text" id="nombre" placeholder="Nombre completo">
         <input type="tel" id="telefono" placeholder="WhatsApp">
-        <label style="font-size:0.8rem; color:gray;">Fecha para recoger (mínimo 48h):</label>
+        <label id="label-fecha" style="font-size:0.8rem; color:gray; display:block; margin-top:10px;">Fecha de recogida:</label>
         <input type="date" id="fechaRecogida">
         <select id="pago">
             <option value="Efectivo">Efectivo</option>
             <option value="Transferencia">Transferencia</option>
         </select>
         <button class="btn-enviar" id="btnEnviar" onclick="enviarPedido()">ENVIAR PEDIDO</button>
-        <button style="background:none; border:none; color:grey; width:100%; margin-top:10px;" onclick="cerrarFormulario()">Cancelar</button>
+        <button style="background:none; border:none; color:grey; width:100%; margin-top:10px; cursor:pointer;" onclick="cerrarFormulario()">Cancelar</button>
     </div>
 </div>
 
 <script>
-    // URL DE TU GOOGLE APPS SCRIPT
-    const WEB_APP_URL ="https://script.google.com/macros/s/AKfycbzbg9gEQB5M60XGE2rs-bo6obIG_z6nD4t66xgeBCf7vJN4URZo89O7-ojJQiQxxZGP/exec"; 
+    const WEB_APP_URL ="https://script.google.com/macros/s/AKfycbwtmYvhJ_dVd09YXA-3WuBBTOZDyvT76JCRryK07UKn2_LhXFSyMxk5y9NynSracxMP/exec"; 
     let carrito = [];
+    let diasMinimosGlobal = 2;
 
-    window.onload = function() {
-        const today = new Date();
-        const minDate = today.toISOString().split('T')[0];
-        document.getElementById('fechaRecogida').setAttribute('min', minDate);
+    window.onload = async function() {
+        try {
+            const res = await fetch(WEB_APP_URL + "?getSettings=1");
+            const data = await res.json();
+            
+            // Si hay un mensaje, lo mostramos en el MODAL emergente
+            if(data.mensaje && data.mensaje.trim() !== "") {
+                document.getElementById('texto-aviso').innerText = data.mensaje;
+                document.getElementById('modal-aviso').style.display = 'flex';
+            }
+
+            diasMinimosGlobal = parseInt(data.dias) || 0;
+            const labelFecha = document.getElementById('label-fecha');
+            labelFecha.innerText = diasMinimosGlobal === 0 ? 
+                "¡Disponible para hoy mismo!:" : 
+                `Fecha para recoger (mínimo ${diasMinimosGlobal}h):`;
+
+        } catch (e) { console.error("Error cargando ajustes."); }
+
+        const fechaInput = document.getElementById('fechaRecogida');
+        const hoy = new Date();
+        hoy.setHours(hoy.getHours() + diasMinimosGlobal);
+        const minDate = hoy.toISOString().split('T')[0];
+        fechaInput.setAttribute('min', minDate);
+        fechaInput.value = minDate;
     };
+
+    function cerrarAviso() { document.getElementById('modal-aviso').style.display = 'none'; }
 
     function agregar(nombre, precio) {
         carrito.push({ nombre, precio });
@@ -187,12 +175,9 @@
         bar.style.display = carrito.length > 0 ? 'flex' : 'none';
 
         const conteo = {};
-        carrito.forEach(prod => {
-            conteo[prod.nombre] = (conteo[prod.nombre] || 0) + 1;
-        });
+        carrito.forEach(prod => { conteo[prod.nombre] = (conteo[prod.nombre] || 0) + 1; });
 
-        const productosHTML = document.querySelectorAll('.producto');
-        productosHTML.forEach(div => {
+        document.querySelectorAll('.producto').forEach(div => {
             const nombreProd = div.getAttribute('data-nombre');
             const badge = div.querySelector('.badge');
             const cantidad = conteo[nombreProd] || 0;
@@ -207,12 +192,12 @@
         let total = 0;
         carrito.forEach((item, index) => {
             total += item.precio;
-            lista.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.85rem;">
+            lista.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; border-bottom:1px solid #f0f0f0; padding-bottom:5px;">
                 <span>${item.nombre}</span>
-                <span>$${item.precio.toLocaleString()} <button onclick="eliminar(${index})" style="color:red; border:none; background:none;">✕</button></span>
+                <span>$${item.precio.toLocaleString()} <button onclick="eliminar(${index})" style="color:red; border:none; background:none; font-weight:bold; cursor:pointer;">✕</button></span>
             </div>`;
         });
-        lista.innerHTML += `<div style="text-align:right; font-weight:bold; margin-top:10px;">Total: $${total.toLocaleString()}</div>`;
+        lista.innerHTML += `<div style="text-align:right; font-weight:bold; margin-top:15px; font-size:1.1rem; color:var(--accent);">Total: $${total.toLocaleString()}</div>`;
         document.getElementById('modal').style.display = 'flex';
     }
 
@@ -230,13 +215,12 @@
         const f = document.getElementById('fechaRecogida').value;
         const p = document.getElementById('pago').value;
 
-        if (!n || !t || !f) return alert("Por favor, completa todos los campos del formulario.");
+        if (!n || !t || !f) return alert("Por favor, completa todos los campos.");
 
         const btn = document.getElementById('btnEnviar');
-        btn.innerText = "⏳ REGISTRANDO PEDIDO...";
+        btn.innerText = "⏳ REGISTRANDO...";
         btn.disabled = true;
 
-        // Preparamos resumen para WhatsApp y datos para Google
         let total = 0;
         let resumenTexto = "";
         carrito.forEach(item => {
@@ -244,45 +228,16 @@
             resumenTexto += `- ${item.nombre} ($${item.precio.toLocaleString()})\n`;
         });
 
-        const pedidoData = { 
-            nombre: n, 
-            telefono: t, 
-            fecha: f, 
-            pago: p, 
-            items: carrito.map(i => i.nombre).join(", ") 
-        };
+        const pedidoData = { tipo: "PEDIDO", nombre: n, telefono: t, fecha: f, pago: p, items: carrito.map(i => i.nombre).join(", ") };
 
         try {
-            // 1. Enviamos a Google Apps Script
-            await fetch(WEB_APP_URL, {
-                method: "POST",
-                mode: "no-cors", 
-                body: JSON.stringify(pedidoData)
-            });
-
-            // 2. Pequeña espera para asegurar procesamiento del servidor
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            alert("✅ Pedido registrado con éxito en nuestro sistema.\n\nHaga clic en Aceptar para enviar el detalle por WhatsApp.");
-            
-            // 3. Construimos el mensaje de WhatsApp
-            const mensajeWA = `*NUEVO PEDIDO - ANIMAL PRO* 🐷\n\n` +
-                              `*Cliente:* ${n}\n` +
-                              `*WhatsApp:* ${t}\n` +
-                              `*Fecha Recogida:* ${f}\n` +
-                              `*Método Pago:* ${p}\n\n` +
-                              `*PRODUCTOS:* \n${resumenTexto}\n` +
-                              `*TOTAL A PAGAR: $${total.toLocaleString()}*\n\n` +
-                              `_Confirmar recibido por favor._`;
-
-            const urlWA = `https://wa.me/573012324030?text=${encodeURIComponent(mensajeWA)}`;
-            
-            // 4. Redirección final
-            window.location.href = urlWA;
-
+            await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(pedidoData) });
+            await new Promise(r => setTimeout(r, 1500));
+            alert("✅ Pedido registrado.");
+            const mensajeWA = `*NUEVO PEDIDO* 🐷\n\n*Cliente:* ${n}\n*WhatsApp:* ${t}\n*Fecha Recogida:* ${f}\n*Pago:* ${p}\n\n*PRODUCTOS:* \n${resumenTexto}\n*TOTAL: $${total.toLocaleString()}*`;
+            window.location.href = `https://wa.me/573012324030?text=${encodeURIComponent(mensajeWA)}`;
         } catch (e) {
-            alert("Hubo un error de conexión, pero abriremos WhatsApp para procesar su pedido manualmente.");
-            window.location.href = `https://wa.me/573012324030?text=Hola, quiero hacer un pedido de: ${pedidoData.items}`;
+            window.location.href = `https://wa.me/573012324030?text=Pedido: ${pedidoData.items}`;
         }
     }
 </script>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Admin - Animal Pro</title>
+    <style>
+        :root { --bg: #121212; --card: #1e1e1e; --primary: #25d366; --text: #e0e0e0; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 20px; }
+        .admin-card { background: var(--card); padding: 30px; border-radius: 15px; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h2 { color: var(--primary); margin-top: 0; }
+        label { display: block; margin-bottom: 8px; font-size: 0.9rem; color: #bbb; }
+        input, textarea { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #333; background: #2c2c2c; color: white; box-sizing: border-box; }
+        button { width: 100%; background: var(--primary); color: #000; border: none; padding: 15px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #1eb956; }
+        #status { text-align: center; margin-top: 15px; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+<div class="admin-card">
+    <h2>Configuración Animal Pro</h2>
+    
+    <label>Días mínimos para entrega:</label>
+    <input type="number" id="minDays" placeholder="Ej: 2">
+
+    <label>Mensaje de bienvenida / Aviso:</label>
+    <textarea id="announcement" rows="3" placeholder="Ej: ¡Hoy tenemos entrega inmediata!"></textarea>
+
+    <button onclick="guardarAjustes()">ACTUALIZAR PLATAFORMA</button>
+    <div id="status"></div>
+</div>
+
+<script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwtmYvhJ_dVd09YXA-3WuBBTOZDyvT76JCRryK07UKn2_LhXFSyMxk5y9NynSracxMP/exec"; // La misma que ya usas
+
+    async function guardarAjustes() {
+        const status = document.getElementById('status');
+        const data = {
+            tipo: "UPDATE_SETTINGS",
+            dias: document.getElementById('minDays').value,
+            mensaje: document.getElementById('announcement').value
+        };
+
+        status.innerText = "⏳ Guardando cambios...";
+        
+        try {
+            await fetch(WEB_APP_URL, {
+                method: "POST",
+                mode: "no-cors",
+                body: JSON.stringify(data)
+            });
+            status.style.color = "#25d366";
+            status.innerText = "✅ ¡Configuración actualizada!";
+        } catch (e) {
+            status.innerText = "❌ Error al conectar.";
+        }
+    }
+</script>
+</body>
+</html>
