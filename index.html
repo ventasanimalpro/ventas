@@ -37,7 +37,29 @@
 
         /* Estilos Generales */
         header { background: var(--accent); color: white; padding: 1.5rem; text-align: center; font-weight: bold; font-size: 1.3rem; }
-        .contenedor { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 12px; }
+        
+        /* Barra de Búsqueda estilo Google */
+        .search-container { text-align: center; padding: 20px 12px 10px 12px; }
+        .search-bar { 
+            width: 100%; max-width: 600px; padding: 14px 20px 14px 45px; 
+            border-radius: 24px; border: 1px solid #dfe1e5; 
+            font-size: 1rem; outline: none; transition: box-shadow 0.2s, border-color 0.2s;
+            box-sizing: border-box; 
+            background: white url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="gray" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>') no-repeat 18px center;
+        }
+        .search-bar:focus { box-shadow: 0 1px 6px rgba(32,33,36,.28); border-color: transparent; }
+
+        /* Estilos Banners de Grupo */
+        .banner-grupo { 
+            background: linear-gradient(135deg, var(--accent) 0%, #2e8b57 100%);
+            color: white; padding: 12px 20px; border-radius: 12px; font-weight: 800; 
+            margin: 15px 12px 10px 12px; font-size: 1.15rem; text-transform: uppercase; 
+            letter-spacing: 0.5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        /* Contenedor de Productos */
+        .contenedor-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 0 12px 12px 12px; }
         .producto { 
             background: var(--card-bg); border-radius: 12px; overflow: hidden; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.08); text-align: center; 
@@ -48,14 +70,15 @@
         .producto img { width: 100%; height: 150px; object-fit: contain; background: #fff; padding: 5px; box-sizing: border-box; }
         .info-prod { padding: 10px; flex-grow: 1; }
         .info-prod h3 { font-size: 0.75rem; margin: 5px 0; color: #333; text-transform: uppercase; }
-        .info-prod p { color: var(--accent); font-weight: bold; font-size: 1rem; }
+        .info-prod p { color: var(--accent); font-weight: bold; font-size: 1rem; margin: 5px 0 0 0;}
 
+        /* Carrito y Formularios */
         #cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #ddd; display: none; justify-content: space-between; align-items: center; padding: 15px 25px; height: 90px; z-index: 100; box-sizing: border-box; }
         .btn-terminar { background: var(--primary); color: white; border: none; padding: 18px 30px; border-radius: 15px; font-weight: 900; cursor: pointer; font-size: 1.1rem; }
 
         #modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 200; }
         .modal-content { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto; box-sizing: border-box;}
-        input, select { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid #eee; background: #f9f9f9; border-radius: 10px; box-sizing: border-box; }
+        input[type="text"]:not(.search-bar), input[type="tel"], input[type="date"], select { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid #eee; background: #f9f9f9; border-radius: 10px; box-sizing: border-box; }
         .btn-enviar { width: 100%; background: var(--accent); color: white; border: none; padding: 16px; font-weight: bold; border-radius: 10px; cursor: pointer; margin-top: 15px; }
     </style>
 </head>
@@ -71,8 +94,12 @@
 
 <header>CATÁLOGO ANIMAL PRO</header>
 
-<div class="contenedor" id="contenedor-productos">
-    <p style="grid-column: span 2; text-align: center; color: gray;">⏳ Cargando catálogo...</p>
+<div class="search-container">
+    <input type="text" id="buscador" class="search-bar" placeholder="Buscar productos..." onkeyup="filtrarProductos()">
+</div>
+
+<div id="catalogo-principal">
+    <p style="text-align: center; color: gray;">⏳ Cargando catálogo...</p>
 </div>
 
 <div id="cart-bar">
@@ -99,25 +126,22 @@
 </div>
 
 <script>
-    // URL DE TU GOOGLE APPS SCRIPT (Asegúrate de que sea la última versión que creaste)
-    const WEB_APP_URL ="https://script.google.com/macros/s/AKfycbzWP-H2VHbSZUbO7AZRQMzOfE-2XWhmcpOPn72-bdbxQI1NA-Ew0pXZVmjscgMW4nK0/exec"; 
+    // URL DE TU GOOGLE APPS SCRIPT
+    const WEB_APP_URL ="https://script.google.com/macros/s/AKfycbzWZ30hBZkVPdGlJ0fdww4j_xvIokOTiQTbYqZxzJkm38h4z0BQ5kONSEU-JXXQazz7/exec"; 
     
     let carrito = [];
     let diasMinimosGlobal = 2;
 
     window.onload = async function() {
         try {
-            // Petición al backend para traer ajustes y productos
             const res = await fetch(WEB_APP_URL + "?getData=1");
             const data = await res.json();
             
-            // 1. Configurar Aviso Importante
             if(data.mensaje && data.mensaje.trim() !== "") {
                 document.getElementById('texto-aviso').innerText = data.mensaje;
                 document.getElementById('modal-aviso').style.display = 'flex';
             }
 
-            // 2. Configurar Días Mínimos y Fechas
             diasMinimosGlobal = parseInt(data.dias) || 0;
             const labelFecha = document.getElementById('label-fecha');
             labelFecha.innerText = diasMinimosGlobal === 0 ? 
@@ -135,41 +159,98 @@
             fechaInput.setAttribute('min', minDate);
             fechaInput.value = minDate;
 
-            // 3. Renderizar los Productos Dinámicamente
-            const contenedor = document.getElementById('contenedor-productos');
-            contenedor.innerHTML = ""; 
+            const catalogo = document.getElementById('catalogo-principal');
+            catalogo.innerHTML = ""; 
 
             if(data.productos && data.productos.length > 0) {
+                // 1. Agrupar los productos por su categoría
+                const productosPorGrupo = {};
                 data.productos.forEach(prod => {
-                    contenedor.innerHTML += `
-                    <div class="producto" onclick="agregar(this.dataset.nombre, parseInt(this.dataset.precio))" data-nombre="${prod.nombre}" data-precio="${prod.precio}">
-                        <span class="badge">0</span>
-                        <img src="${prod.imagen}" alt="${prod.nombre}">
-                        <div class="info-prod">
-                            <h3>${prod.nombre}</h3>
-                            <p>$${prod.precio.toLocaleString()}</p>
-                        </div>
-                    </div>`;
+                    const grupo = prod.grupo || "GENERAL";
+                    if(!productosPorGrupo[grupo]) productosPorGrupo[grupo] = [];
+                    productosPorGrupo[grupo].push(prod);
                 });
+
+                // 2. Renderizar Bloques por Grupo
+                for(const [grupo, prods] of Object.entries(productosPorGrupo)) {
+                    
+                    // Contenedor principal del grupo
+                    let htmlGrupo = `<div class="seccion-grupo">`;
+                    
+                    // Banner del grupo
+                    htmlGrupo += `<div class="banner-grupo">📂 ${grupo}</div>`;
+                    
+                    // Grid de productos de ese grupo
+                    htmlGrupo += `<div class="contenedor-grid">`;
+                    
+                    prods.forEach(prod => {
+                        htmlGrupo += `
+                        <div class="producto" onclick="agregar(this.dataset.nombre, parseInt(this.dataset.precio))" data-nombre="${prod.nombre}" data-precio="${prod.precio}">
+                            <span class="badge">0</span>
+                            <img src="${prod.imagen}" alt="${prod.nombre}">
+                            <div class="info-prod">
+                                <h3>${prod.nombre}</h3>
+                                <p>$${prod.precio.toLocaleString()}</p>
+                            </div>
+                        </div>`;
+                    });
+
+                    // Cerrar grid y contenedor del grupo
+                    htmlGrupo += `</div></div>`;
+                    
+                    // Inyectar al HTML
+                    catalogo.innerHTML += htmlGrupo;
+                }
             } else {
-                contenedor.innerHTML = "<p style='grid-column: span 2; text-align: center; color: gray;'>No hay productos disponibles por el momento.</p>";
+                catalogo.innerHTML = "<p style='text-align: center; color: gray;'>No hay productos disponibles por el momento.</p>";
             }
 
         } catch (e) { 
             console.error("Error cargando base de datos.", e);
-            document.getElementById('contenedor-productos').innerHTML = "<p style='grid-column: span 2; text-align: center; color: red;'>Error cargando el catálogo. Intenta recargar la página.</p>";
+            document.getElementById('catalogo-principal').innerHTML = "<p style='text-align: center; color: red;'>Error cargando el catálogo. Intenta recargar la página.</p>";
         }
     };
 
+    // --- NUEVA FUNCIÓN DE BÚSQUEDA ---
+    function filtrarProductos() {
+        // Obtenemos lo que escribió el usuario en minúsculas
+        const query = document.getElementById('buscador').value.toLowerCase();
+        
+        // Obtenemos todas las secciones (grupos)
+        const secciones = document.querySelectorAll('.seccion-grupo');
+
+        secciones.forEach(seccion => {
+            const productos = seccion.querySelectorAll('.producto');
+            let coincidenciasEnGrupo = 0;
+
+            // Revisar cada producto dentro del grupo
+            productos.forEach(prod => {
+                const nombre = prod.getAttribute('data-nombre').toLowerCase();
+                if (nombre.includes(query)) {
+                    prod.style.display = ''; // Lo muestra (respeta el grid)
+                    coincidenciasEnGrupo++;
+                } else {
+                    prod.style.display = 'none'; // Lo oculta
+                }
+            });
+
+            // Si ningún producto de este grupo coincide con la búsqueda, ocultamos todo el banner
+            if (coincidenciasEnGrupo === 0) {
+                seccion.style.display = 'none';
+            } else {
+                seccion.style.display = 'block';
+            }
+        });
+    }
+    // ---------------------------------
+
     function cerrarAviso() { document.getElementById('modal-aviso').style.display = 'none'; }
 
-    // Función para añadir al carrito
     function agregar(nombre, precio) {
         carrito.push({ nombre, precio });
         actualizarUI();
     }
 
-    // Actualiza los badges (contadores rojos) y la barra inferior del carrito
     function actualizarUI() {
         const bar = document.getElementById('cart-bar');
         document.getElementById('contador').innerText = carrito.length;
@@ -187,7 +268,6 @@
         });
     }
 
-    // NUEVA FUNCIÓN: Agrupa los productos repetidos y suma sus precios
     function obtenerCarritoAgrupado() {
         let agrupado = {};
         carrito.forEach(item => {
@@ -200,7 +280,6 @@
         return agrupado;
     }
 
-    // Muestra el modal agrupando las cantidades (Ej: 3x Cavas)
     function abrirFormulario() {
         const lista = document.getElementById('lista-resumen');
         lista.innerHTML = "";
@@ -220,7 +299,6 @@
         document.getElementById('modal').style.display = 'flex';
     }
 
-    // Elimina solo UNA unidad del producto a la vez
     function eliminarUnidad(nombre) {
         const index = carrito.findIndex(item => item.nombre === nombre);
         if (index > -1) {
@@ -232,7 +310,6 @@
 
     function cerrarFormulario() { document.getElementById('modal').style.display = 'none'; }
 
-    // Envía el pedido agrupado a Google Sheets y a WhatsApp
     async function enviarPedido() {
         const n = document.getElementById('nombre').value;
         const t = document.getElementById('telefono').value;
@@ -263,7 +340,7 @@
             telefono: t, 
             fecha: f, 
             pago: p, 
-            items: itemsSheets.join(" / ") // Los separa con una barra en Excel
+            items: itemsSheets.join(" / ") 
         };
 
         try {

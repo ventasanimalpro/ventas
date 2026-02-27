@@ -9,10 +9,13 @@
         .admin-card { background: var(--card); padding: 30px; border-radius: 15px; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         h2 { color: var(--primary); margin-top: 0; }
         label { display: block; margin-bottom: 8px; font-size: 0.9rem; color: #bbb; }
-        input, textarea { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #333; background: #2c2c2c; color: white; box-sizing: border-box; }
+        input, textarea, select { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #333; background: #2c2c2c; color: white; box-sizing: border-box; }
         button { width: 100%; background: var(--primary); color: #000; border: none; padding: 15px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.3s; margin-bottom: 10px;}
         button:hover { background: #1eb956; }
         .status { text-align: center; margin-top: 10px; font-size: 0.85rem; font-weight: bold;}
+        .grupo-container { display: flex; gap: 10px; margin-bottom: 20px; }
+        .grupo-container select { margin-bottom: 0; }
+        .btn-plus { width: 50px; padding: 0; font-size: 1.2rem; margin-bottom: 0; }
     </style>
 </head>
 <body>
@@ -29,6 +32,16 @@
 
 <div class="admin-card">
     <h2>📦 Añadir Nuevo Producto</h2>
+    
+    <label>Grupo / Categoría:</label>
+    <div class="grupo-container">
+        <select id="prodGrupoSelect">
+            <option value="">Cargando grupos...</option>
+        </select>
+        <button class="btn-plus" onclick="toggleNuevoGrupo()" title="Añadir nuevo grupo">➕</button>
+    </div>
+    <input type="text" id="prodGrupoNuevo" placeholder="Escribe el nombre del nuevo grupo" style="display: none;">
+
     <label>Nombre del Producto:</label>
     <input type="text" id="prodNombre" placeholder="Ej: BOLSAS SEMEN MAXTER">
     <label>Precio (sin puntos ni comas):</label>
@@ -40,16 +53,42 @@
 </div>
 
 <script>
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzWP-H2VHbSZUbO7AZRQMzOfE-2XWhmcpOPn72-bdbxQI1NA-Ew0pXZVmjscgMW4nK0/exec";
+    // ** PON TU URL DE GOOGLE APPS SCRIPT AQUÍ **
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzWZ30hBZkVPdGlJ0fdww4j_xvIokOTiQTbYqZxzJkm38h4z0BQ5kONSEU-JXXQazz7/exec";
 
-    // 1. Guardar Ajustes (Tu código original)
+    // Cargar los grupos existentes al entrar
+    window.onload = async function() {
+        try {
+            const res = await fetch(WEB_APP_URL + "?getData=1");
+            const data = await res.json();
+            const select = document.getElementById('prodGrupoSelect');
+            select.innerHTML = "";
+            if(data.grupos && data.grupos.length > 0) {
+                data.grupos.forEach(g => {
+                    select.innerHTML += `<option value="${g}">${g}</option>`;
+                });
+            } else {
+                select.innerHTML = `<option value="GENERAL">GENERAL</option>`;
+            }
+        } catch(e) { console.error("Error al cargar grupos", e); }
+    };
+
+    function toggleNuevoGrupo() {
+        const input = document.getElementById('prodGrupoNuevo');
+        const select = document.getElementById('prodGrupoSelect');
+        if(input.style.display === 'none') {
+            input.style.display = 'block';
+            select.style.display = 'none';
+            input.focus();
+        } else {
+            input.style.display = 'none';
+            select.style.display = 'block';
+        }
+    }
+
     async function guardarAjustes() {
         const status = document.getElementById('status');
-        const data = {
-            tipo: "UPDATE_SETTINGS",
-            dias: document.getElementById('minDays').value,
-            mensaje: document.getElementById('announcement').value
-        };
+        const data = { tipo: "UPDATE_SETTINGS", dias: document.getElementById('minDays').value, mensaje: document.getElementById('announcement').value };
         status.innerText = "⏳ Guardando cambios...";
         try {
             await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(data) });
@@ -59,11 +98,17 @@
         }
     }
 
-    // 2. Comprimir imagen y Guardar Producto
     function guardarProducto() {
         const nombre = document.getElementById('prodNombre').value.toUpperCase();
         const precio = document.getElementById('prodPrecio').value;
         const fileInput = document.getElementById('prodImagen');
+        
+        // Obtener el grupo seleccionado o escrito
+        const selectGrupo = document.getElementById('prodGrupoSelect');
+        const inputGrupo = document.getElementById('prodGrupoNuevo');
+        let grupo = inputGrupo.style.display === 'block' ? inputGrupo.value.toUpperCase() : selectGrupo.value.toUpperCase();
+        if(!grupo) grupo = "GENERAL";
+
         const status = document.getElementById('statusProd');
 
         if(!nombre || !precio || !fileInput.files[0]) {
@@ -73,7 +118,6 @@
 
         status.style.color = "#bbb"; status.innerText = "⏳ Optimizando imagen...";
 
-        // Redimensionar imagen a Max 400px para no saturar Google Sheets
         const file = fileInput.files[0];
         const reader = new FileReader();
         
@@ -90,22 +134,21 @@
                 canvas.width = width; canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-                
-                // Convertir a Base64 comprimido
                 const base64Imagen = canvas.toDataURL('image/jpeg', 0.6); 
 
-                // Enviar al servidor
                 status.innerText = "⏳ Guardando en catálogo...";
-                const data = { tipo: "ADD_PRODUCT", nombre: nombre, precio: parseInt(precio), imagen: base64Imagen };
+                // Incluimos el grupo en los datos
+                const data = { tipo: "ADD_PRODUCT", nombre: nombre, precio: parseInt(precio), imagen: base64Imagen, grupo: grupo };
 
                 try {
                     await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(data) });
-                    status.style.color = "#25d366"; status.innerText = "✅ ¡Producto agregado con éxito!";
+                    status.style.color = "#25d366"; status.innerText = "✅ ¡Producto agregado!";
                     
-                    // Limpiar formulario
                     document.getElementById('prodNombre').value = '';
                     document.getElementById('prodPrecio').value = '';
                     document.getElementById('prodImagen').value = '';
+                    // Si se añadió un grupo nuevo, recargar para actualizar la lista
+                    if(inputGrupo.style.display === 'block') { setTimeout(()=> location.reload(), 1500); }
                 } catch (err) {
                     status.style.color = "#ff4d4d"; status.innerText = "❌ Error al conectar con el servidor.";
                 }
