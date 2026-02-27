@@ -99,7 +99,7 @@
 </div>
 
 <script>
-    // URL DE TU GOOGLE APPS SCRIPT
+    // URL DE TU GOOGLE APPS SCRIPT (Asegúrate de que sea la última versión que creaste)
     const WEB_APP_URL ="https://script.google.com/macros/s/AKfycbzHOLmfCiSIKo6Fp8spoqIIdpsS75RpBnAQPs4tyskd3hl3jlVqwUmsUcUtkllWpzbh/exec"; 
     
     let carrito = [];
@@ -107,7 +107,7 @@
 
     window.onload = async function() {
         try {
-            // Petición al backend para traer ajustes y productos al mismo tiempo
+            // Petición al backend para traer ajustes y productos
             const res = await fetch(WEB_APP_URL + "?getData=1");
             const data = await res.json();
             
@@ -135,13 +135,12 @@
             fechaInput.setAttribute('min', minDate);
             fechaInput.value = minDate;
 
-            // 3. Renderizar los Productos Dinámicamente en pantalla
+            // 3. Renderizar los Productos Dinámicamente
             const contenedor = document.getElementById('contenedor-productos');
-            contenedor.innerHTML = ""; // Quitar el texto de "Cargando catálogo..."
+            contenedor.innerHTML = ""; 
 
             if(data.productos && data.productos.length > 0) {
                 data.productos.forEach(prod => {
-                    // Dibujamos cada tarjeta de producto
                     contenedor.innerHTML += `
                     <div class="producto" onclick="agregar(this.dataset.nombre, parseInt(this.dataset.precio))" data-nombre="${prod.nombre}" data-precio="${prod.precio}">
                         <span class="badge">0</span>
@@ -188,33 +187,52 @@
         });
     }
 
-    // Muestra el modal con el resumen del pedido
+    // NUEVA FUNCIÓN: Agrupa los productos repetidos y suma sus precios
+    function obtenerCarritoAgrupado() {
+        let agrupado = {};
+        carrito.forEach(item => {
+            if (!agrupado[item.nombre]) {
+                agrupado[item.nombre] = { precioUnitario: item.precio, cantidad: 0, subtotal: 0 };
+            }
+            agrupado[item.nombre].cantidad += 1;
+            agrupado[item.nombre].subtotal += item.precio;
+        });
+        return agrupado;
+    }
+
+    // Muestra el modal agrupando las cantidades (Ej: 3x Cavas)
     function abrirFormulario() {
         const lista = document.getElementById('lista-resumen');
         lista.innerHTML = "";
         let total = 0;
         
-        carrito.forEach((item, index) => {
-            total += item.precio;
+        const carritoAgrupado = obtenerCarritoAgrupado();
+        
+        for (const [nombre, datos] of Object.entries(carritoAgrupado)) {
+            total += datos.subtotal;
             lista.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; border-bottom:1px solid #f0f0f0; padding-bottom:5px;">
-                <span>${item.nombre}</span>
-                <span>$${item.precio.toLocaleString()} <button type="button" onclick="eliminar(${index})" style="color:red; border:none; background:none; font-weight:bold; cursor:pointer;">✕</button></span>
+                <span><b>${datos.cantidad}x</b> ${nombre}</span>
+                <span>$${datos.subtotal.toLocaleString()} <button type="button" onclick="eliminarUnidad('${nombre}')" style="color:red; border:none; background:none; font-weight:bold; cursor:pointer; margin-left:10px;" title="Quitar 1">✕</button></span>
             </div>`;
-        });
+        }
         
         lista.innerHTML += `<div style="text-align:right; font-weight:bold; margin-top:15px; font-size:1.1rem; color:var(--accent);">Total: $${total.toLocaleString()}</div>`;
         document.getElementById('modal').style.display = 'flex';
     }
 
-    function eliminar(idx) {
-        carrito.splice(idx, 1);
+    // Elimina solo UNA unidad del producto a la vez
+    function eliminarUnidad(nombre) {
+        const index = carrito.findIndex(item => item.nombre === nombre);
+        if (index > -1) {
+            carrito.splice(index, 1);
+        }
         carrito.length === 0 ? cerrarFormulario() : abrirFormulario();
         actualizarUI();
     }
 
     function cerrarFormulario() { document.getElementById('modal').style.display = 'none'; }
 
-    // Envía el pedido al Google Script y luego abre WhatsApp
+    // Envía el pedido agrupado a Google Sheets y a WhatsApp
     async function enviarPedido() {
         const n = document.getElementById('nombre').value;
         const t = document.getElementById('telefono').value;
@@ -229,10 +247,15 @@
 
         let total = 0;
         let resumenTexto = "";
-        carrito.forEach(item => {
-            total += item.precio;
-            resumenTexto += `- ${item.nombre} ($${item.precio.toLocaleString()})\n`;
-        });
+        let itemsSheets = [];
+        
+        const carritoAgrupado = obtenerCarritoAgrupado();
+
+        for (const [nombre, datos] of Object.entries(carritoAgrupado)) {
+            total += datos.subtotal;
+            resumenTexto += `- ${datos.cantidad}x ${nombre} ($${datos.subtotal.toLocaleString()})\n`;
+            itemsSheets.push(`${datos.cantidad}x ${nombre}`);
+        }
 
         const pedidoData = { 
             tipo: "PEDIDO", 
@@ -240,22 +263,19 @@
             telefono: t, 
             fecha: f, 
             pago: p, 
-            items: carrito.map(i => i.nombre).join(", ") 
+            items: itemsSheets.join(" / ") // Los separa con una barra en Excel
         };
 
         try {
-            // Envío en segundo plano a la hoja de Google Sheets
             await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(pedidoData) });
             await new Promise(r => setTimeout(r, 1500));
             
             alert("✅ Pedido registrado correctamente.");
             
-            // Redirección a WhatsApp
             const mensajeWA = `*NUEVO PEDIDO* 🐷\n\n*Cliente:* ${n}\n*WhatsApp:* ${t}\n*Fecha Recogida:* ${f}\n*Pago:* ${p}\n\n*PRODUCTOS:* \n${resumenTexto}\n*TOTAL: $${total.toLocaleString()}*`;
             window.location.href = `https://wa.me/573012324030?text=${encodeURIComponent(mensajeWA)}`;
             
         } catch (e) {
-            // Failsafe: Si hay un error de conexión, se envía por WhatsApp de todas formas
             window.location.href = `https://wa.me/573012324030?text=Pedido de ${n}: ${pedidoData.items}`;
         }
     }
