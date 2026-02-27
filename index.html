@@ -50,11 +50,11 @@
         .info-prod h3 { font-size: 0.75rem; margin: 5px 0; color: #333; text-transform: uppercase; }
         .info-prod p { color: var(--accent); font-weight: bold; font-size: 1rem; }
 
-        #cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #ddd; display: none; justify-content: space-between; align-items: center; padding: 15px 25px; height: 90px; z-index: 100; }
+        #cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #ddd; display: none; justify-content: space-between; align-items: center; padding: 15px 25px; height: 90px; z-index: 100; box-sizing: border-box; }
         .btn-terminar { background: var(--primary); color: white; border: none; padding: 18px 30px; border-radius: 15px; font-weight: 900; cursor: pointer; font-size: 1.1rem; }
 
         #modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 200; }
-        .modal-content { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto; }
+        .modal-content { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto; box-sizing: border-box;}
         input, select { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid #eee; background: #f9f9f9; border-radius: 10px; box-sizing: border-box; }
         .btn-enviar { width: 100%; background: var(--accent); color: white; border: none; padding: 16px; font-weight: bold; border-radius: 10px; cursor: pointer; margin-top: 15px; }
     </style>
@@ -71,40 +71,8 @@
 
 <header>CATÁLOGO ANIMAL PRO</header>
 
-<div class="contenedor">
-    <div class="producto" onclick="agregar('2 BOLSAS SEMEN MAXTER (PIETRAN)', 90000)" data-nombre="2 BOLSAS SEMEN MAXTER (PIETRAN)">
-        <span class="badge">0</span><img src="ima1.jpg"><div class="info-prod"><h3>2 BOLSAS SEMEN MAXTER (PIETRAN)</h3><p>$90.000</p></div>
-    </div>
-    <div class="producto" onclick="agregar('2 BOLSAS SEMEN MAGNUS (DUROC)', 90000)" data-nombre="2 BOLSAS SEMEN MAGNUS (DUROC)">
-        <span class="badge">0</span><img src="ima2.jpg"><div class="info-prod"><h3>2 BOLSAS SEMEN MAGNUS (DUROC)</h3><p>$90.000</p></div>
-    </div>
-    <div class="producto" onclick="agregar('2 BOLSAS SEMEN MATERNAL (LANDRACE)', 640000)" data-nombre="2 BOLSAS SEMEN MATERNAL (LANDRACE)">
-        <span class="badge">0</span><img src="ima2.jpg"><div class="info-prod"><h3>2 BOLSAS SEMEN MATERNAL (LANDRACE)</h3><p>$640.000</p></div>
-    </div>
-    <div class="producto" onclick="agregar('2 BOLSAS SEMEN MATERNAL (LARGE-WHITE)', 640000)" data-nombre="2 BOLSAS SEMEN MATERNAL (LARGE-WHITE)">
-        <span class="badge">0</span><img src="ima2.jpg"><div class="info-prod"><h3>2 BOLSAS SEMEN MATERNAL (LARGE-WHITE)</h3><p>$640.000</p></div>
-    </div>
-    <div class="producto" onclick="agregar('2 CATETER PRIMERIZA ESPUMA', 8000)" data-nombre="2 CATETER PRIMERIZA ESPUMA">
-        <span class="badge">0</span><img src="ima3.jpg"><div class="info-prod"><h3>2 CATETER PRIMERIZA ESPUMA</h3><p>$8.000</p></div>
-    </div>
-    <div class="producto" onclick="agregar('2 CATETER MULTIPARA ESPUMA', 8000)" data-nombre="2 CATETER MULTIPARA ESPUMA">
-        <span class="badge">0</span><img src="ima4.jpg"><div class="info-prod"><h3>2 CATETER MULTIPARA ESPUMA</h3><p>$8.000</p></div>
-    </div>
-    <div class="producto" onclick="agregar('2 CATETER MULTIPARA ESPIRAL', 8000)" data-nombre="2 CATETER MULTIPARA ESPIRAL">
-        <span class="badge">0</span><img src="ima5.jpg"><div class="info-prod"><h3>2 CATETER MULTIPARA ESPIRAL</h3><p>$8.000</p></div>
-    </div>
-    <div class="producto" onclick="agregar('2 CATETER MULTIPARA POST CERVICAL', 8000)" data-nombre="2 CATETER MULTIPARA POST CERVICAL">
-        <span class="badge">0</span><img src="ima6.jpg"><div class="info-prod"><h3>2 CATETER MULTIPARA POST CERVICAL</h3><p>$8.000</p></div>
-    </div>
-    <div class="producto" onclick="agregar('CAVA DE ICOPOR CON PILAS DE HIELO', 15000)" data-nombre="CAVA DE ICOPOR CON PILAS DE HIELO">
-        <span class="badge">0</span><img src="ima8.jpg"><div class="info-prod"><h3>CAVA DE ICOPOR CON PILAS DE HIELO</h3><p>$15.000</p></div>
-    </div>
-    <div class="producto" onclick="agregar('DOMICILIO TERMINAL CUCUTA', 10000)" data-nombre="DOMICILIO TERMINAL CUCUTA">
-        <span class="badge">0</span><img src="ima7.jpg"><div class="info-prod"><h3>DOMICILIO TERMINAL CUCUTA</h3><p>$10.000</p></div>
-    </div>
-    <div class="producto" onclick="agregar('DOMICILIO LA PARADA', 20000)" data-nombre="DOMICILIO LA PARADA">
-        <span class="badge">0</span><img src="ima7.jpg"><div class="info-prod"><h3>DOMICILIO LA PARADA</h3><p>$20.000</p></div>
-    </div>
+<div class="contenedor" id="contenedor-productos">
+    <p style="grid-column: span 2; text-align: center; color: gray;">⏳ Cargando catálogo...</p>
 </div>
 
 <div id="cart-bar">
@@ -131,52 +99,78 @@
 </div>
 
 <script>
-    const WEB_APP_URL ="https://script.google.com/macros/s/AKfycbwtmYvhJ_dVd09YXA-3WuBBTOZDyvT76JCRryK07UKn2_LhXFSyMxk5y9NynSracxMP/exec"; 
+    // URL DE TU GOOGLE APPS SCRIPT
+    const WEB_APP_URL ="https://script.google.com/macros/s/AKfycbzHOLmfCiSIKo6Fp8spoqIIdpsS75RpBnAQPs4tyskd3hl3jlVqwUmsUcUtkllWpzbh/exec"; 
+    
     let carrito = [];
     let diasMinimosGlobal = 2;
 
     window.onload = async function() {
         try {
-            const res = await fetch(WEB_APP_URL + "?getSettings=1");
+            // Petición al backend para traer ajustes y productos al mismo tiempo
+            const res = await fetch(WEB_APP_URL + "?getData=1");
             const data = await res.json();
             
+            // 1. Configurar Aviso Importante
             if(data.mensaje && data.mensaje.trim() !== "") {
                 document.getElementById('texto-aviso').innerText = data.mensaje;
                 document.getElementById('modal-aviso').style.display = 'flex';
             }
 
+            // 2. Configurar Días Mínimos y Fechas
             diasMinimosGlobal = parseInt(data.dias) || 0;
             const labelFecha = document.getElementById('label-fecha');
             labelFecha.innerText = diasMinimosGlobal === 0 ? 
                 "¡Disponible para hoy mismo!:" : 
                 `Fecha para recoger (mínimo ${diasMinimosGlobal} día(s)):`;
 
-        } catch (e) { console.error("Error cargando ajustes."); }
+            const fechaInput = document.getElementById('fechaRecogida');
+            const hoy = new Date();
+            hoy.setDate(hoy.getDate() + diasMinimosGlobal);
+            const anio = hoy.getFullYear();
+            const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+            const dia = String(hoy.getDate()).padStart(2, '0');
+            const minDate = `${anio}-${mes}-${dia}`;
+            
+            fechaInput.setAttribute('min', minDate);
+            fechaInput.value = minDate;
 
-        // --- LÓGICA DE FECHA CORREGIDA ---
-        const fechaInput = document.getElementById('fechaRecogida');
-        const hoy = new Date();
-        
-        // Sumamos los días exactos en lugar de horas para que el calendario lo reconozca bien
-        hoy.setDate(hoy.getDate() + diasMinimosGlobal);
-        
-        // Ajustamos al formato YYYY-MM-DD local
-        const anio = hoy.getFullYear();
-        const mes = String(hoy.getMonth() + 1).padStart(2, '0');
-        const dia = String(hoy.getDate()).padStart(2, '0');
-        const minDate = `${anio}-${mes}-${dia}`;
+            // 3. Renderizar los Productos Dinámicamente en pantalla
+            const contenedor = document.getElementById('contenedor-productos');
+            contenedor.innerHTML = ""; // Quitar el texto de "Cargando catálogo..."
 
-        fechaInput.setAttribute('min', minDate);
-        fechaInput.value = minDate;
+            if(data.productos && data.productos.length > 0) {
+                data.productos.forEach(prod => {
+                    // Dibujamos cada tarjeta de producto
+                    contenedor.innerHTML += `
+                    <div class="producto" onclick="agregar(this.dataset.nombre, parseInt(this.dataset.precio))" data-nombre="${prod.nombre}" data-precio="${prod.precio}">
+                        <span class="badge">0</span>
+                        <img src="${prod.imagen}" alt="${prod.nombre}">
+                        <div class="info-prod">
+                            <h3>${prod.nombre}</h3>
+                            <p>$${prod.precio.toLocaleString()}</p>
+                        </div>
+                    </div>`;
+                });
+            } else {
+                contenedor.innerHTML = "<p style='grid-column: span 2; text-align: center; color: gray;'>No hay productos disponibles por el momento.</p>";
+            }
+
+        } catch (e) { 
+            console.error("Error cargando base de datos.", e);
+            document.getElementById('contenedor-productos').innerHTML = "<p style='grid-column: span 2; text-align: center; color: red;'>Error cargando el catálogo. Intenta recargar la página.</p>";
+        }
     };
 
     function cerrarAviso() { document.getElementById('modal-aviso').style.display = 'none'; }
 
+    // Función para añadir al carrito
     function agregar(nombre, precio) {
         carrito.push({ nombre, precio });
         actualizarUI();
     }
 
+    // Actualiza los badges (contadores rojos) y la barra inferior del carrito
     function actualizarUI() {
         const bar = document.getElementById('cart-bar');
         document.getElementById('contador').innerText = carrito.length;
@@ -194,17 +188,20 @@
         });
     }
 
+    // Muestra el modal con el resumen del pedido
     function abrirFormulario() {
         const lista = document.getElementById('lista-resumen');
         lista.innerHTML = "";
         let total = 0;
+        
         carrito.forEach((item, index) => {
             total += item.precio;
             lista.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; border-bottom:1px solid #f0f0f0; padding-bottom:5px;">
                 <span>${item.nombre}</span>
-                <span>$${item.precio.toLocaleString()} <button onclick="eliminar(${index})" style="color:red; border:none; background:none; font-weight:bold; cursor:pointer;">✕</button></span>
+                <span>$${item.precio.toLocaleString()} <button type="button" onclick="eliminar(${index})" style="color:red; border:none; background:none; font-weight:bold; cursor:pointer;">✕</button></span>
             </div>`;
         });
+        
         lista.innerHTML += `<div style="text-align:right; font-weight:bold; margin-top:15px; font-size:1.1rem; color:var(--accent);">Total: $${total.toLocaleString()}</div>`;
         document.getElementById('modal').style.display = 'flex';
     }
@@ -217,6 +214,7 @@
 
     function cerrarFormulario() { document.getElementById('modal').style.display = 'none'; }
 
+    // Envía el pedido al Google Script y luego abre WhatsApp
     async function enviarPedido() {
         const n = document.getElementById('nombre').value;
         const t = document.getElementById('telefono').value;
@@ -236,16 +234,29 @@
             resumenTexto += `- ${item.nombre} ($${item.precio.toLocaleString()})\n`;
         });
 
-        const pedidoData = { tipo: "PEDIDO", nombre: n, telefono: t, fecha: f, pago: p, items: carrito.map(i => i.nombre).join(", ") };
+        const pedidoData = { 
+            tipo: "PEDIDO", 
+            nombre: n, 
+            telefono: t, 
+            fecha: f, 
+            pago: p, 
+            items: carrito.map(i => i.nombre).join(", ") 
+        };
 
         try {
+            // Envío en segundo plano a la hoja de Google Sheets
             await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(pedidoData) });
             await new Promise(r => setTimeout(r, 1500));
-            alert("✅ Pedido registrado.");
+            
+            alert("✅ Pedido registrado correctamente.");
+            
+            // Redirección a WhatsApp
             const mensajeWA = `*NUEVO PEDIDO* 🐷\n\n*Cliente:* ${n}\n*WhatsApp:* ${t}\n*Fecha Recogida:* ${f}\n*Pago:* ${p}\n\n*PRODUCTOS:* \n${resumenTexto}\n*TOTAL: $${total.toLocaleString()}*`;
             window.location.href = `https://wa.me/573012324030?text=${encodeURIComponent(mensajeWA)}`;
+            
         } catch (e) {
-            window.location.href = `https://wa.me/573012324030?text=Pedido: ${pedidoData.items}`;
+            // Failsafe: Si hay un error de conexión, se envía por WhatsApp de todas formas
+            window.location.href = `https://wa.me/573012324030?text=Pedido de ${n}: ${pedidoData.items}`;
         }
     }
 </script>
