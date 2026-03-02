@@ -38,8 +38,11 @@
         /* Estilos Generales */
         header { background: var(--accent); color: white; padding: 1.5rem; text-align: center; font-weight: bold; font-size: 1.3rem; }
         
-        /* Barra de Búsqueda estilo Google */
-        .search-container { text-align: center; padding: 20px 12px 10px 12px; }
+        /* Barra de Búsqueda estilo Google (AHORA FIJA) */
+        .search-container { 
+            text-align: center; padding: 20px 12px 10px 12px; 
+            position: sticky; top: 0; background: var(--light); z-index: 1000;
+        }
         .search-bar { 
             width: 100%; max-width: 600px; padding: 14px 20px 14px 45px; 
             border-radius: 24px; border: 1px solid #dfe1e5; 
@@ -80,6 +83,34 @@
         .modal-content { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto; box-sizing: border-box;}
         input[type="text"]:not(.search-bar), input[type="tel"], input[type="date"], select { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid #eee; background: #f9f9f9; border-radius: 10px; box-sizing: border-box; }
         .btn-enviar { width: 100%; background: var(--accent); color: white; border: none; padding: 16px; font-weight: bold; border-radius: 10px; cursor: pointer; margin-top: 15px; }
+
+        /* Modal de Detalles del Producto */
+        #modal-producto { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); display: none; justify-content: center; 
+            align-items: center; z-index: 2500; backdrop-filter: blur(3px);
+        }
+        .modal-prod-content { 
+            background: white; padding: 20px; border-radius: 20px; width: 90%; 
+            max-width: 450px; position: relative; box-sizing: border-box;
+        }
+        .cerrar-modal-prod { 
+            position: absolute; top: 15px; right: 20px; font-size: 1.5rem; 
+            background: none; border: none; color: #888; cursor: pointer;
+        }
+        .modal-prod-body { display: flex; gap: 15px; align-items: center; margin-bottom: 20px;}
+        .modal-prod-body img { width: 120px; height: 120px; object-fit: contain; border-radius: 10px; background:#fff; padding:5px; border:1px solid #eee;}
+        .modal-prod-info { flex-grow: 1; text-align: left; }
+        .modal-prod-info h3 { margin: 0 0 5px 0; font-size: 1.1rem; color: #333; }
+        .modal-prod-info p.precio { margin: 0 0 10px 0; color: var(--accent); font-weight: bold; font-size: 1.2rem; }
+        .modal-prod-info p.desc { margin: 0; font-size: 0.9rem; color: #666; line-height: 1.4; max-height: 80px; overflow-y: auto;}
+        
+        .modal-prod-controles { display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 20px; }
+        .btn-qty { background: #f0f0f0; border: none; width: 45px; height: 45px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; color: #333; transition: 0.2s;}
+        .btn-qty:active { background: #ddd; transform: scale(0.95);}
+        .modal-prod-controles span { font-size: 1.5rem; font-weight: bold; width: 30px; text-align: center;}
+        
+        .btn-add-modal { width: 100%; background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; transition: background-color 0.3s;}
     </style>
 </head>
 <body>
@@ -125,9 +156,29 @@
     </div>
 </div>
 
+<div id="modal-producto">
+    <div class="modal-prod-content">
+        <button class="cerrar-modal-prod" onclick="cerrarModalProducto()">✖</button>
+        <div class="modal-prod-body">
+            <img id="mp-img" src="" alt="Producto">
+            <div class="modal-prod-info">
+                <h3 id="mp-nombre">Nombre</h3>
+                <p class="precio" id="mp-precio">$0</p>
+                <p class="desc" id="mp-desc">Descripción aquí...</p>
+            </div>
+        </div>
+        <div class="modal-prod-controles">
+            <button class="btn-qty" onclick="cambiarCantModal(-1)">-</button>
+            <span id="mp-cant">1</span>
+            <button class="btn-qty" onclick="cambiarCantModal(1)">+</button>
+        </div>
+        <button class="btn-add-modal" onclick="agregarAlCarritoDesdeModal()">AGREGAR AL CARRITO</button>
+    </div>
+</div>
+
 <script>
     // URL DE TU GOOGLE APPS SCRIPT
-    const WEB_APP_URL ="https://script.google.com/macros/s/AKfycbzWZ30hBZkVPdGlJ0fdww4j_xvIokOTiQTbYqZxzJkm38h4z0BQ5kONSEU-JXXQazz7/exec"; 
+    const WEB_APP_URL ="https://script.google.com/macros/s/AKfycbzPCq8xXONvlZrdNTKWm0vYRt47YW8ieea9kaCs-ZQN5yQCtUeQL29elUm7WAbD8Sff/exec"; 
     
     let carrito = [];
     let diasMinimosGlobal = 2;
@@ -183,9 +234,14 @@
                     // Grid de productos de ese grupo
                     htmlGrupo += `<div class="contenedor-grid">`;
                     
+                    // Renderizamos los productos usando el nuevo modal de detalles
                     prods.forEach(prod => {
                         htmlGrupo += `
-                        <div class="producto" onclick="agregar(this.dataset.nombre, parseInt(this.dataset.precio))" data-nombre="${prod.nombre}" data-precio="${prod.precio}">
+                        <div class="producto" onclick="abrirModalProducto(this)" 
+                             data-nombre="${prod.nombre}" 
+                             data-precio="${prod.precio}" 
+                             data-img="${prod.imagen}" 
+                             data-desc="${prod.descripcion || 'Sin descripción adicional.'}">
                             <span class="badge">0</span>
                             <img src="${prod.imagen}" alt="${prod.nombre}">
                             <div class="info-prod">
@@ -211,30 +267,24 @@
         }
     };
 
-    // --- NUEVA FUNCIÓN DE BÚSQUEDA ---
     function filtrarProductos() {
-        // Obtenemos lo que escribió el usuario en minúsculas
         const query = document.getElementById('buscador').value.toLowerCase();
-        
-        // Obtenemos todas las secciones (grupos)
         const secciones = document.querySelectorAll('.seccion-grupo');
 
         secciones.forEach(seccion => {
             const productos = seccion.querySelectorAll('.producto');
             let coincidenciasEnGrupo = 0;
 
-            // Revisar cada producto dentro del grupo
             productos.forEach(prod => {
                 const nombre = prod.getAttribute('data-nombre').toLowerCase();
                 if (nombre.includes(query)) {
-                    prod.style.display = ''; // Lo muestra (respeta el grid)
+                    prod.style.display = ''; 
                     coincidenciasEnGrupo++;
                 } else {
-                    prod.style.display = 'none'; // Lo oculta
+                    prod.style.display = 'none'; 
                 }
             });
 
-            // Si ningún producto de este grupo coincide con la búsqueda, ocultamos todo el banner
             if (coincidenciasEnGrupo === 0) {
                 seccion.style.display = 'none';
             } else {
@@ -242,14 +292,73 @@
             }
         });
     }
-    // ---------------------------------
 
     function cerrarAviso() { document.getElementById('modal-aviso').style.display = 'none'; }
 
-    function agregar(nombre, precio) {
-        carrito.push({ nombre, precio });
-        actualizarUI();
+    // --- LÓGICA DEL MODAL DE PRODUCTO (ACTUALIZADO) ---
+    let prodModalActual = { nombre: "", precio: 0, cant: 1 };
+
+    // Función para saber cuántos hay ya en el carrito
+    function cantidadPreviaEnCarrito(nombre) {
+        return carrito.filter(item => item.nombre === nombre).length;
     }
+
+    function abrirModalProducto(elemento) {
+        prodModalActual.nombre = elemento.getAttribute('data-nombre');
+        prodModalActual.precio = parseInt(elemento.getAttribute('data-precio'));
+        
+        // Si ya hay de este producto en el carrito, mostramos esa cantidad. Si no, empezamos en 1.
+        let prevCant = cantidadPreviaEnCarrito(prodModalActual.nombre);
+        prodModalActual.cant = prevCant > 0 ? prevCant : 1; 
+
+        document.getElementById('mp-img').src = elemento.getAttribute('data-img');
+        document.getElementById('mp-nombre').innerText = prodModalActual.nombre;
+        document.getElementById('mp-precio').innerText = "$" + prodModalActual.precio.toLocaleString();
+        document.getElementById('mp-desc').innerText = elemento.getAttribute('data-desc');
+        
+        actualizarBotonModal();
+        document.getElementById('modal-producto').style.display = 'flex';
+    }
+
+    function cerrarModalProducto() {
+        document.getElementById('modal-producto').style.display = 'none';
+    }
+
+    function cambiarCantModal(cambio) {
+        // Ahora permitimos que baje hasta 0 para poder eliminarlo
+        if (prodModalActual.cant + cambio >= 0) { 
+            prodModalActual.cant += cambio;
+            actualizarBotonModal();
+        }
+    }
+
+    function actualizarBotonModal() {
+        document.getElementById('mp-cant').innerText = prodModalActual.cant;
+        const btn = document.querySelector('.btn-add-modal');
+        
+        if (prodModalActual.cant === 0) {
+            btn.innerText = "ELIMINAR DEL CARRITO";
+            btn.style.backgroundColor = "var(--danger)"; // Se pone rojo
+        } else {
+            let prevCant = cantidadPreviaEnCarrito(prodModalActual.nombre);
+            btn.innerText = prevCant > 0 ? "ACTUALIZAR CANTIDAD" : "AGREGAR AL CARRITO";
+            btn.style.backgroundColor = "var(--primary)"; // Se pone verde
+        }
+    }
+
+    function agregarAlCarritoDesdeModal() {
+        // 1. Sacamos todas las unidades previas de este producto del carrito
+        carrito = carrito.filter(item => item.nombre !== prodModalActual.nombre);
+        
+        // 2. Metemos la nueva cantidad (si lo bajó a 0, el ciclo no se ejecuta y queda eliminado)
+        for (let i = 0; i < prodModalActual.cant; i++) {
+            carrito.push({ nombre: prodModalActual.nombre, precio: prodModalActual.precio });
+        }
+        
+        actualizarUI();
+        cerrarModalProducto(); 
+    }
+    // --------------------------------------------------
 
     function actualizarUI() {
         const bar = document.getElementById('cart-bar');

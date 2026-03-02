@@ -46,6 +46,10 @@
     <input type="text" id="prodNombre" placeholder="Ej: BOLSAS SEMEN MAXTER">
     <label>Precio (sin puntos ni comas):</label>
     <input type="number" id="prodPrecio" placeholder="Ej: 90000">
+    
+    <label>Descripción del Producto:</label>
+    <textarea id="prodDesc" rows="3" placeholder="Ej: Bolsa x 10 unidades. Excelente calidad..."></textarea>
+    
     <label>Imagen del Producto:</label>
     <input type="file" id="prodImagen" accept="image/*">
     <button onclick="guardarProducto()">GUARDAR PRODUCTO</button>
@@ -53,8 +57,8 @@
 </div>
 
 <script>
-    // ** PON TU URL DE GOOGLE APPS SCRIPT AQUÍ **
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzWZ30hBZkVPdGlJ0fdww4j_xvIokOTiQTbYqZxzJkm38h4z0BQ5kONSEU-JXXQazz7/exec";
+    // URL DE TU GOOGLE APPS SCRIPT
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzPCq8xXONvlZrdNTKWm0vYRt47YW8ieea9kaCs-ZQN5yQCtUeQL29elUm7WAbD8Sff/exec";
 
     // Cargar los grupos existentes al entrar
     window.onload = async function() {
@@ -101,6 +105,7 @@
     function guardarProducto() {
         const nombre = document.getElementById('prodNombre').value.toUpperCase();
         const precio = document.getElementById('prodPrecio').value;
+        const descripcion = document.getElementById('prodDesc').value; // CAPTURAMOS LA DESCRIPCIÓN
         const fileInput = document.getElementById('prodImagen');
         
         // Obtener el grupo seleccionado o escrito
@@ -112,7 +117,7 @@
         const status = document.getElementById('statusProd');
 
         if(!nombre || !precio || !fileInput.files[0]) {
-            status.style.color = "#ff4d4d"; status.innerText = "⚠️ Completa todos los campos";
+            status.style.color = "#ff4d4d"; status.innerText = "⚠️ Completa nombre, precio e imagen";
             return;
         }
 
@@ -137,8 +142,16 @@
                 const base64Imagen = canvas.toDataURL('image/jpeg', 0.6); 
 
                 status.innerText = "⏳ Guardando en catálogo...";
-                // Incluimos el grupo en los datos
-                const data = { tipo: "ADD_PRODUCT", nombre: nombre, precio: parseInt(precio), imagen: base64Imagen, grupo: grupo };
+                
+                // INCLUIMOS LA DESCRIPCIÓN AL ENVIAR LOS DATOS
+                const data = { 
+                    tipo: "ADD_PRODUCT", 
+                    nombre: nombre, 
+                    precio: parseInt(precio), 
+                    imagen: base64Imagen, 
+                    grupo: grupo,
+                    descripcion: descripcion
+                };
 
                 try {
                     await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(data) });
@@ -146,6 +159,7 @@
                     
                     document.getElementById('prodNombre').value = '';
                     document.getElementById('prodPrecio').value = '';
+                    document.getElementById('prodDesc').value = ''; // Limpiamos la descripción
                     document.getElementById('prodImagen').value = '';
                     // Si se añadió un grupo nuevo, recargar para actualizar la lista
                     if(inputGrupo.style.display === 'block') { setTimeout(()=> location.reload(), 1500); }
