@@ -276,8 +276,12 @@
             let coincidenciasEnGrupo = 0;
 
             productos.forEach(prod => {
+                // Capturamos el nombre y también la descripción en minúsculas
                 const nombre = prod.getAttribute('data-nombre').toLowerCase();
-                if (nombre.includes(query)) {
+                const descripcion = prod.getAttribute('data-desc').toLowerCase(); 
+
+                // Evaluamos si el texto buscado está en el nombre O en la descripción
+                if (nombre.includes(query) || descripcion.includes(query)) {
                     prod.style.display = ''; 
                     coincidenciasEnGrupo++;
                 } else {
