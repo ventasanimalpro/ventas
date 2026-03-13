@@ -75,6 +75,11 @@
         .info-prod h3 { font-size: 0.75rem; margin: 5px 0; color: #333; text-transform: uppercase; }
         .info-prod p { color: var(--accent); font-weight: bold; font-size: 1rem; margin: 5px 0 0 0;}
 
+        /* Estilos Gancho Comercial */
+        .precio-original { text-decoration: line-through; color: #999; font-size: 0.8rem; margin-right: 5px; font-weight: normal; }
+        .etiqueta-descuento { background: #ff9800; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 5px; vertical-align: middle; font-weight: bold; display: inline-block; }
+        .mp-precio-container { margin-bottom: 10px; }
+
         /* Carrito y Formularios */
         #cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #ddd; display: none; justify-content: space-between; align-items: center; padding: 15px 25px; height: 90px; z-index: 100; box-sizing: border-box; }
         .btn-terminar { background: var(--primary); color: white; border: none; padding: 18px 30px; border-radius: 15px; font-weight: 900; cursor: pointer; font-size: 1.1rem; }
@@ -163,7 +168,7 @@
             <img id="mp-img" src="" alt="Producto">
             <div class="modal-prod-info">
                 <h3 id="mp-nombre">Nombre</h3>
-                <p class="precio" id="mp-precio">$0</p>
+                <div class="mp-precio-container" id="mp-precio-container"></div>
                 <p class="desc" id="mp-desc">Descripción aquí...</p>
             </div>
         </div>
@@ -234,19 +239,27 @@
                     // Grid de productos de ese grupo
                     htmlGrupo += `<div class="contenedor-grid">`;
                     
-                    // Renderizamos los productos usando el nuevo modal de detalles
+                   // Renderizamos los productos
                     prods.forEach(prod => {
+                        let tieneDescuento = prod.descuento && prod.descuento.toString().trim() !== "";
+                        
+                        let htmlPrecio = tieneDescuento 
+                            ? `<p><span class="precio-original">$${prod.precioOriginal.toLocaleString()}</span> $${prod.precio.toLocaleString()} <span class="etiqueta-descuento">${prod.descuento}</span></p>`
+                            : `<p>$${prod.precio.toLocaleString()}</p>`;
+
                         htmlGrupo += `
                         <div class="producto" onclick="abrirModalProducto(this)" 
                              data-nombre="${prod.nombre}" 
                              data-precio="${prod.precio}" 
+                             data-precio-original="${prod.precioOriginal}"
+                             data-descuento="${prod.descuento}"
                              data-img="${prod.imagen}" 
-                             data-desc="${prod.descripcion || 'Sin descripción adicional.'}">
+                             data-desc="${prod.descripcion}">
                             <span class="badge">0</span>
                             <img src="${prod.imagen}" alt="${prod.nombre}">
                             <div class="info-prod">
                                 <h3>${prod.nombre}</h3>
-                                <p>$${prod.precio.toLocaleString()}</p>
+                                ${htmlPrecio}
                             </div>
                         </div>`;
                     });
@@ -311,14 +324,22 @@
         prodModalActual.nombre = elemento.getAttribute('data-nombre');
         prodModalActual.precio = parseInt(elemento.getAttribute('data-precio'));
         
-        // Si ya hay de este producto en el carrito, mostramos esa cantidad. Si no, empezamos en 1.
+        let precioOriginal = elemento.getAttribute('data-precio-original');
+        let descuento = elemento.getAttribute('data-descuento');
+        
         let prevCant = cantidadPreviaEnCarrito(prodModalActual.nombre);
         prodModalActual.cant = prevCant > 0 ? prevCant : 1; 
 
         document.getElementById('mp-img').src = elemento.getAttribute('data-img');
         document.getElementById('mp-nombre').innerText = prodModalActual.nombre;
-        document.getElementById('mp-precio').innerText = "$" + prodModalActual.precio.toLocaleString();
         document.getElementById('mp-desc').innerText = elemento.getAttribute('data-desc');
+        
+        let contenedorPrecio = document.getElementById('mp-precio-container');
+        if (descuento && descuento !== "null" && descuento !== "") {
+            contenedorPrecio.innerHTML = `<p class="precio" style="margin:0; color:var(--accent); font-weight:bold; font-size:1.2rem;"><span class="precio-original">$${parseInt(precioOriginal).toLocaleString()}</span> $${prodModalActual.precio.toLocaleString()} <span class="etiqueta-descuento" style="font-size: 0.9rem;">${descuento}</span></p>`;
+        } else {
+            contenedorPrecio.innerHTML = `<p class="precio" style="margin:0; color:var(--accent); font-weight:bold; font-size:1.2rem;">$${prodModalActual.precio.toLocaleString()}</p>`;
+        }
         
         actualizarBotonModal();
         document.getElementById('modal-producto').style.display = 'flex';
