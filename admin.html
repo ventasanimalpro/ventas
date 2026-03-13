@@ -44,17 +44,14 @@
 
     <label>Nombre del Producto:</label>
     <input type="text" id="prodNombre" placeholder="Ej: BOLSAS SEMEN MAXTER">
-    <label>Precio (sin puntos ni comas):</label>
-    <input type="number" id="prodPrecio" placeholder="Ej: 90000">
     
-    <div style="background: #2a2a2a; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px dashed #ff9800;">
-        <label style="color: #ff9800;">🔥 Gancho Comercial (Opcional):</label>
-        
-        <label>Texto del Descuento (Aparecerá en naranja):</label>
-        <input type="text" id="prodDescuento" placeholder="Ej: -20%, 2x1, Promo!" style="margin-bottom: 10px;">
-        
-        <label>Precio Final a Cobrar (El precio de arriba quedará tachado):</label>
-        <input type="number" id="prodPrecioFinal" placeholder="Ej: 75000" style="margin-bottom: 0;">
+    <label>Precio Normal (sin puntos ni comas):</label>
+    <input type="number" id="prodPrecio" placeholder="Ej: 100000">
+    
+    <div style="background: #2a2a2a; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px dashed #e53935;">
+        <label style="color: #e53935; font-weight: bold;">🔥 Oferta / Descuento (Opcional):</label>
+        <label style="font-size: 0.8rem;">Precio Final a Cobrar (El sistema calculará el % en rojo solo):</label>
+        <input type="number" id="prodPrecioFinal" placeholder="Ej: 80000" style="margin-bottom: 0;">
     </div>
 
     <label>Descripción del Producto:</label>
@@ -67,8 +64,8 @@
 </div>
 
 <script>
-    // URL DE TU GOOGLE APPS SCRIPT
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzPCq8xXONvlZrdNTKWm0vYRt47YW8ieea9kaCs-ZQN5yQCtUeQL29elUm7WAbD8Sff/exec";
+    // URL DE TU GOOGLE APPS SCRIPT (LA MISMA QUE EL INDEX)
+    const WEB_APP_URL ="https://script.google.com/macros/s/AKfycbyDOyhLgJ2lSArhxA2P87St1S2N8PZUp6uVr-ypmUbc1q5mlw63yd2u2cn0hs6jnzf2gljhr486u3dkgm2y/exec";
 
     // Cargar los grupos existentes al entrar
     window.onload = async function() {
@@ -114,21 +111,14 @@
 
     function guardarProducto() {
         const nombre = document.getElementById('prodNombre').value.toUpperCase();
-        // Este será el precio original/tachado si hay promoción, o el precio normal si no la hay.
         const precio = document.getElementById('prodPrecio').value; 
         const descripcion = document.getElementById('prodDesc').value; 
         const fileInput = document.getElementById('prodImagen');
         
-        // CAPTURAMOS LOS NUEVOS DATOS
-        const descuento = document.getElementById('prodDescuento').value;
+        // CAPTURAMOS EL PRECIO DE DESCUENTO
         const precioFinalInput = document.getElementById('prodPrecioFinal').value;
-        
-        // Lógica de precios: 
-        // Si escribió un "Precio Final", ese es el que se cobra. 
-        // Si lo dejó en blanco, se cobra el precio normal ingresado arriba.
         const precioFinal = precioFinalInput ? parseInt(precioFinalInput) : parseInt(precio);
         
-        // Obtener el grupo seleccionado o escrito
         const selectGrupo = document.getElementById('prodGrupoSelect');
         const inputGrupo = document.getElementById('prodGrupoNuevo');
         let grupo = inputGrupo.style.display === 'block' ? inputGrupo.value.toUpperCase() : selectGrupo.value.toUpperCase();
@@ -163,7 +153,6 @@
 
                 status.innerText = "⏳ Guardando en catálogo...";
                 
-                // INCLUIMOS EL DESCUENTO Y EL PRECIO FINAL EN EL OBJETO DE DATOS
                 const data = { 
                     tipo: "ADD_PRODUCT", 
                     nombre: nombre, 
@@ -171,19 +160,17 @@
                     imagen: base64Imagen, 
                     grupo: grupo,
                     descripcion: descripcion,
-                    descuento: descuento, // Nuevo
-                    precioFinal: precioFinal // Nuevo
+                    descuento: "", 
+                    precioFinal: precioFinal
                 };
 
                 try {
                     await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(data) });
                     status.style.color = "#25d366"; status.innerText = "✅ ¡Producto agregado!";
                     
-                    // Limpiamos todos los campos
                     document.getElementById('prodNombre').value = '';
                     document.getElementById('prodPrecio').value = '';
                     document.getElementById('prodDesc').value = '';
-                    document.getElementById('prodDescuento').value = '';
                     document.getElementById('prodPrecioFinal').value = '';
                     document.getElementById('prodImagen').value = '';
                     

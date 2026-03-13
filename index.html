@@ -38,7 +38,7 @@
         /* Estilos Generales */
         header { background: var(--accent); color: white; padding: 1.5rem; text-align: center; font-weight: bold; font-size: 1.3rem; }
         
-        /* Barra de Búsqueda estilo Google (AHORA FIJA) */
+        /* Barra de Búsqueda estilo Google */
         .search-container { 
             text-align: center; padding: 20px 12px 10px 12px; 
             position: sticky; top: 0; background: var(--light); z-index: 1000;
@@ -77,7 +77,7 @@
 
         /* Estilos Gancho Comercial */
         .precio-original { text-decoration: line-through; color: #999; font-size: 0.8rem; margin-right: 5px; font-weight: normal; }
-        .etiqueta-descuento { background: #ff9800; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 5px; vertical-align: middle; font-weight: bold; display: inline-block; }
+        .etiqueta-descuento { background: #e53935; color: white; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; margin-left: 8px; vertical-align: middle; font-weight: 900; display: inline-block; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(229,57,53,0.3); }
         .mp-precio-container { margin-bottom: 10px; }
 
         /* Carrito y Formularios */
@@ -182,8 +182,8 @@
 </div>
 
 <script>
-    // URL DE TU GOOGLE APPS SCRIPT
-    const WEB_APP_URL ="https://script.google.com/macros/s/AKfycbzPCq8xXONvlZrdNTKWm0vYRt47YW8ieea9kaCs-ZQN5yQCtUeQL29elUm7WAbD8Sff/exec"; 
+    // URL DE TU GOOGLE APPS SCRIPT LIMPIA
+   const WEB_APP_URL ="https://script.google.com/macros/s/AKfycbyDOyhLgJ2lSArhxA2P87St1S2N8PZUp6uVr-ypmU1dEadwZSRE6TnDLOV3dGmHGQIk/exec"; 
     
     let carrito = [];
     let diasMinimosGlobal = 2;
@@ -219,7 +219,6 @@
             catalogo.innerHTML = ""; 
 
             if(data.productos && data.productos.length > 0) {
-                // 1. Agrupar los productos por su categoría
                 const productosPorGrupo = {};
                 data.productos.forEach(prod => {
                     const grupo = prod.grupo || "GENERAL";
@@ -227,32 +226,35 @@
                     productosPorGrupo[grupo].push(prod);
                 });
 
-                // 2. Renderizar Bloques por Grupo
                 for(const [grupo, prods] of Object.entries(productosPorGrupo)) {
-                    
-                    // Contenedor principal del grupo
                     let htmlGrupo = `<div class="seccion-grupo">`;
-                    
-                    // Banner del grupo
                     htmlGrupo += `<div class="banner-grupo">📂 ${grupo}</div>`;
-                    
-                    // Grid de productos de ese grupo
                     htmlGrupo += `<div class="contenedor-grid">`;
                     
-                   // Renderizamos los productos
                     prods.forEach(prod => {
-                        let tieneDescuento = prod.descuento && prod.descuento.toString().trim() !== "";
+                        let precioOrig = parseInt(prod.precioOriginal);
+                        let precioFinal = parseInt(prod.precio);
                         
-                        let htmlPrecio = tieneDescuento 
-                            ? `<p><span class="precio-original">$${prod.precioOriginal.toLocaleString()}</span> $${prod.precio.toLocaleString()} <span class="etiqueta-descuento">${prod.descuento}</span></p>`
-                            : `<p>$${prod.precio.toLocaleString()}</p>`;
+                        // Si el precio original existe y es mayor al final, hay descuento
+                        let tieneDescuento = !isNaN(precioOrig) && !isNaN(precioFinal) && precioOrig > precioFinal;
+                        
+                        let htmlPrecio = "";
+                        let porcentajeGuardar = ""; 
+                        
+                        if (tieneDescuento) {
+                            let porcentaje = Math.round(((precioOrig - precioFinal) / precioOrig) * 100);
+                            porcentajeGuardar = `-${porcentaje}%`;
+                            htmlPrecio = `<p><span class="precio-original">$${precioOrig.toLocaleString()}</span> $${precioFinal.toLocaleString()} <span class="etiqueta-descuento">${porcentajeGuardar}</span></p>`;
+                        } else {
+                            htmlPrecio = `<p>$${precioFinal.toLocaleString()}</p>`;
+                        }
 
                         htmlGrupo += `
                         <div class="producto" onclick="abrirModalProducto(this)" 
                              data-nombre="${prod.nombre}" 
                              data-precio="${prod.precio}" 
                              data-precio-original="${prod.precioOriginal}"
-                             data-descuento="${prod.descuento}"
+                             data-descuento="${porcentajeGuardar}"
                              data-img="${prod.imagen}" 
                              data-desc="${prod.descripcion}">
                             <span class="badge">0</span>
@@ -264,10 +266,7 @@
                         </div>`;
                     });
 
-                    // Cerrar grid y contenedor del grupo
-                    htmlGrupo += `</div></div>`;
-                    
-                    // Inyectar al HTML
+                    htmlGrupo += `</div></div>`; // Cierra el grupo y el grid
                     catalogo.innerHTML += htmlGrupo;
                 }
             } else {
@@ -289,11 +288,9 @@
             let coincidenciasEnGrupo = 0;
 
             productos.forEach(prod => {
-                // Capturamos el nombre y también la descripción en minúsculas
                 const nombre = prod.getAttribute('data-nombre').toLowerCase();
                 const descripcion = prod.getAttribute('data-desc').toLowerCase(); 
 
-                // Evaluamos si el texto buscado está en el nombre O en la descripción
                 if (nombre.includes(query) || descripcion.includes(query)) {
                     prod.style.display = ''; 
                     coincidenciasEnGrupo++;
@@ -312,10 +309,8 @@
 
     function cerrarAviso() { document.getElementById('modal-aviso').style.display = 'none'; }
 
-    // --- LÓGICA DEL MODAL DE PRODUCTO (ACTUALIZADO) ---
     let prodModalActual = { nombre: "", precio: 0, cant: 1 };
 
-    // Función para saber cuántos hay ya en el carrito
     function cantidadPreviaEnCarrito(nombre) {
         return carrito.filter(item => item.nombre === nombre).length;
     }
@@ -350,7 +345,6 @@
     }
 
     function cambiarCantModal(cambio) {
-        // Ahora permitimos que baje hasta 0 para poder eliminarlo
         if (prodModalActual.cant + cambio >= 0) { 
             prodModalActual.cant += cambio;
             actualizarBotonModal();
@@ -363,27 +357,22 @@
         
         if (prodModalActual.cant === 0) {
             btn.innerText = "ELIMINAR DEL CARRITO";
-            btn.style.backgroundColor = "var(--danger)"; // Se pone rojo
+            btn.style.backgroundColor = "var(--danger)"; 
         } else {
             let prevCant = cantidadPreviaEnCarrito(prodModalActual.nombre);
             btn.innerText = prevCant > 0 ? "ACTUALIZAR CANTIDAD" : "AGREGAR AL CARRITO";
-            btn.style.backgroundColor = "var(--primary)"; // Se pone verde
+            btn.style.backgroundColor = "var(--primary)"; 
         }
     }
 
     function agregarAlCarritoDesdeModal() {
-        // 1. Sacamos todas las unidades previas de este producto del carrito
         carrito = carrito.filter(item => item.nombre !== prodModalActual.nombre);
-        
-        // 2. Metemos la nueva cantidad (si lo bajó a 0, el ciclo no se ejecuta y queda eliminado)
         for (let i = 0; i < prodModalActual.cant; i++) {
             carrito.push({ nombre: prodModalActual.nombre, precio: prodModalActual.precio });
         }
-        
         actualizarUI();
         cerrarModalProducto(); 
     }
-    // --------------------------------------------------
 
     function actualizarUI() {
         const bar = document.getElementById('cart-bar');
