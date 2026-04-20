@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Catálogo Animal Pro</title>
+    
+    <!-- Añadida la librería jsPDF para generar el PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <style>
         :root { 
             --primary: #25d366; 
@@ -24,9 +28,13 @@
 
         header { background: var(--accent); color: white; padding: 1.5rem; text-align: center; font-weight: bold; font-size: 1.3rem; }
         
-        .search-container { text-align: center; padding: 20px 12px 10px 12px; position: sticky; top: 0; background: var(--light); z-index: 1000; }
+        .search-container { text-align: center; padding: 15px 12px 10px 12px; position: sticky; top: 0; background: var(--light); z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .search-bar { width: 100%; max-width: 600px; padding: 14px 20px 14px 45px; border-radius: 24px; border: 1px solid #dfe1e5; font-size: 1rem; outline: none; transition: box-shadow 0.2s, border-color 0.2s; box-sizing: border-box; background: white url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="gray" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>') no-repeat 18px center; }
         .search-bar:focus { box-shadow: 0 1px 6px rgba(32,33,36,.28); border-color: transparent; }
+
+        /* Estilos para el botón de exportar catálogo */
+        .btn-export-pdf { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; margin-top: 12px; display: inline-block; font-size: 0.95rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .btn-export-pdf:active { transform: scale(0.95); }
 
         .banner-grupo { background: linear-gradient(135deg, var(--accent) 0%, #2e8b57 100%); color: white; padding: 12px 20px; border-radius: 12px; font-weight: 800; margin: 15px 12px 10px 12px; font-size: 1.15rem; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; }
 
@@ -83,6 +91,8 @@
 
 <div class="search-container">
     <input type="text" id="buscador" class="search-bar" placeholder="Buscar productos..." onkeyup="filtrarProductos()">
+    <!-- BOTÓN PARA GENERAR EL CATÁLOGO EN PDF -->
+    <button class="btn-export-pdf" id="btnExportPDF" onclick="generarCatalogoPDF()">📖 Descargar Catálogo PDF</button>
 </div>
 
 <div id="catalogo-principal">
@@ -138,6 +148,7 @@
     
     let carrito = [];
     let diasMinimosGlobal = 2;
+    let productosGlobales = []; // Variable global para guardar los productos y usarla en el PDF
 
     window.onload = async function() {
         try {
@@ -170,6 +181,7 @@
             catalogo.innerHTML = ""; 
 
             if(data.productos && data.productos.length > 0) {
+                productosGlobales = data.productos; // Guardar datos para el PDF
                 const productosPorGrupo = {};
                 data.productos.forEach(prod => {
                     const grupo = prod.grupo || "GENERAL";
@@ -397,6 +409,168 @@
         
         // ...y salta instantáneamente a WhatsApp para que el celular no lo tome como Pop-up
         window.location.href = linkWA;
+    }
+
+    // --- FUNCIÓN DE EXPORTACIÓN A PDF (ESTILO CATÁLOGO) ---
+    async function generarCatalogoPDF() {
+        if(!productosGlobales || productosGlobales.length === 0) {
+            alert("⚠️ El catálogo aún está cargando o no hay productos disponibles."); 
+            return;
+        }
+
+        const btn = document.getElementById('btnExportPDF');
+        btn.innerText = "⏳ Generando Catálogo...";
+        btn.style.opacity = "0.7";
+        btn.disabled = true;
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        let yOffset = 25; // Altura inicial después del banner
+        let itemsOnPage = 0;
+        let pageNum = 1;
+
+        // Función para dibujar el encabezado y pie de página
+        const drawHeaderFooter = (pageNo) => {
+            // Banner superior (Verde oscuro, estilo Animal Pro)
+            doc.setFillColor(27, 94, 32); // #1b5e20 (var(--accent))
+            doc.rect(0, 0, 210, 18, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(16);
+            doc.setFont("helvetica", "bold");
+            doc.text("CATÁLOGO DE PRODUCTOS - ANIMAL PRO", 105, 12, { align: "center" });
+            
+            // Pie de página
+            doc.setTextColor(150);
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Página ${pageNo}`, 105, 290, { align: "center" });
+        };
+
+        // Función para convertir URL de imagen a Base64 (Para evitar problemas al incrustar en PDF)
+        const getBase64ImageFromUrl = async (imageUrl) => {
+            return new Promise((resolve) => {
+                let img = new Image();
+                img.crossOrigin = "Anonymous"; // Intenta saltar restricciones CORS
+                img.onload = () => {
+                    let canvas = document.createElement("canvas");
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    let ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL("image/jpeg"));
+                };
+                img.onerror = () => resolve(null); // Si falla, devuelve null
+                img.src = imageUrl;
+            });
+        };
+
+        drawHeaderFooter(pageNum);
+
+        for (let i = 0; i < productosGlobales.length; i++) {
+            const p = productosGlobales[i];
+
+            // 2 productos por página
+            if (itemsOnPage === 2) {
+                doc.addPage();
+                pageNum++;
+                drawHeaderFooter(pageNum);
+                yOffset = 25;
+                itemsOnPage = 0;
+            }
+
+            // Fondo de la tarjeta del producto
+            doc.setFillColor(244, 247, 246); // Color claro del fondo
+            doc.setDrawColor(37, 211, 102); // Borde verde primary
+            doc.setLineWidth(0.5);
+            doc.roundedRect(10, yOffset, 190, 120, 5, 5, 'FD'); // Caja principal
+            
+            // Espacio blanco para la Imagen (Izquierda)
+            doc.setFillColor(255, 255, 255);
+            doc.roundedRect(15, yOffset + 10, 85, 100, 3, 3, 'FD');
+            
+            // Intentar cargar e incrustar la imagen
+            if(p.imagen) {
+                const base64Img = await getBase64ImageFromUrl(p.imagen);
+                if(base64Img) {
+                    doc.addImage(base64Img, 'JPEG', 17, yOffset + 12, 81, 96);
+                } else {
+                    // Placeholder si la imagen falla (Ej. bloqueos de CORS por Google Drive/Sheets)
+                    doc.setTextColor(200);
+                    doc.setFontSize(40);
+                    doc.text("📷", 57, yOffset + 60, { align: "center" });
+                    doc.setFontSize(10);
+                    doc.text("Imagen Ilustrativa", 57, yOffset + 75, { align: "center" });
+                }
+            }
+            
+            // --- Detalles y Especificaciones (Derecha) ---
+            
+            // Título del Producto
+            doc.setTextColor(27, 94, 32); // Verde oscuro
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(22);
+            let splitTitle = doc.splitTextToSize(p.nombre.toUpperCase(), 85);
+            doc.text(splitTitle, 110, yOffset + 22);
+
+            // Línea separadora
+            let titleLines = splitTitle.length;
+            let lineY = yOffset + 25 + ((titleLines - 1) * 8);
+            doc.setDrawColor(200);
+            doc.line(110, lineY, 190, lineY);
+
+            // Descripción / Especificaciones
+            doc.setTextColor(80);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(11);
+            let desc = p.descripcion || "• Excelente calidad para tus animales.\n• Contáctanos para más detalles técnicos y disponibilidad.";
+            let splitDesc = doc.splitTextToSize(desc, 85);
+            doc.text(splitDesc, 110, lineY + 7);
+
+            // Valor Original (Si tiene descuento)
+            let precioFinal = parseInt(p.precio);
+            let precioOriginal = parseInt(p.precioOriginal);
+            
+            if (!isNaN(precioOriginal) && precioOriginal > precioFinal) {
+                doc.setTextColor(150); // Gris
+                doc.setFontSize(14);
+                doc.setFont("helvetica", "normal");
+                // Simular texto tachado
+                let textoViejo = `$${precioOriginal.toLocaleString()}`;
+                doc.text(textoViejo, 110, yOffset + 95);
+                let textWidth = doc.getTextWidth(textoViejo);
+                doc.line(110, yOffset + 93.5, 110 + textWidth, yOffset + 93.5); // Línea de tachado
+
+                // Etiqueta de % Descuento
+                let porcentaje = Math.round(((precioOriginal - precioFinal) / precioOriginal) * 100);
+                doc.setTextColor(229, 57, 53); // Rojo peligro
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(14);
+                doc.text(`-${porcentaje}%`, 110 + textWidth + 5, yOffset + 95);
+            }
+
+            // Etiqueta 'PRECIO'
+            doc.setTextColor(27, 94, 32); 
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(12);
+            doc.text("Llévalo por solo:", 110, yOffset + 103);
+
+            // Valor del Precio Final (Grande y llamativo)
+            doc.setTextColor(37, 211, 102); // Verde brillante
+            doc.setFontSize(30);
+            doc.text(`$${precioFinal.toLocaleString()}`, 110, yOffset + 115);
+
+            yOffset += 130; 
+            itemsOnPage++;
+        }
+
+        // Descargar PDF
+        doc.save(`Catalogo_AnimalPro_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`);
+        
+        // Restaurar botón
+        btn.innerText = "📖 Descargar Catálogo PDF";
+        btn.style.opacity = "1";
+        btn.disabled = false;
     }
 </script>
 </body>
