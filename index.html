@@ -142,6 +142,13 @@
         .btn-table-action { background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 5px; margin: 0 2px; transition: transform 0.2s;}
         .btn-table-action:hover { transform: scale(1.2); }
 
+        /* Badges de Estado Inventario */
+        .badge-status { padding: 4px 8px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; }
+        .bg-success { background: #e8f5e9; color: #2e7d32; }
+        .bg-warning { background: #fff3e0; color: #f57c00; }
+        .bg-danger { background: #ffebee; color: #c62828; }
+        .bg-gray { background: #f5f5f5; color: #757575; }
+
     </style>
 </head>
 <body>
@@ -187,8 +194,9 @@
     <div class="admin-layout">
         <!-- Sidebar Menú -->
         <div class="admin-sidebar">
-            <button class="admin-tab active" onclick="cambiarModulo('ventas', this)">📦 Ventas</button>
-            <button class="admin-tab" onclick="cambiarModulo('compras', this)">🛒 Compras</button>
+            <button class="admin-tab" onclick="cambiarModulo('inventario', this)">📦 Inventario</button>
+            <button class="admin-tab active" onclick="cambiarModulo('ventas', this)">🛒 Ventas</button>
+            <button class="admin-tab" onclick="cambiarModulo('compras', this)">🏭 Compras</button>
             <button class="admin-tab" onclick="cambiarModulo('ingresos', this)">💵 Ingreso (Cartera)</button>
             <button class="admin-tab" onclick="cambiarModulo('egresos', this)">💸 Egreso (Tesorería)</button>
             <button class="admin-tab" onclick="cambiarModulo('cotizaciones', this)">📝 Cotizaciones</button>
@@ -196,6 +204,28 @@
 
         <!-- Área de Contenido -->
         <div class="admin-content-area">
+
+            <!-- Módulo: INVENTARIO -->
+            <div id="mod-inventario" class="modulo-admin">
+                <h3 class="admin-title">Control de Inventario y Lotes</h3>
+                <p style="color: #666; font-size: 0.95rem;">Aquí puedes ver tus existencias disponibles (se calcula restando las Ventas a tus Compras).</p>
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Lote</th>
+                                <th>Vencimiento</th>
+                                <th class="text-right">Stock Disponible</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-inventario">
+                            <tr><td colspan="5" style="text-align:center; color:gray;">Cargando inventario...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
             
             <!-- Módulo: VENTAS -->
             <div id="mod-ventas" class="modulo-admin active">
@@ -219,6 +249,13 @@
                             <input type="text" id="busqueda-prod-ventas" class="autocomplete-input" placeholder="🔍 Escribe para buscar..." autocomplete="off">
                             <div id="autocomplete-list-ventas" class="autocomplete-items"></div>
                         </div>
+                        <!-- NUEVO: Selección de Lote para la venta -->
+                        <div class="admin-form-group">
+                            <label>Lote Disponible (Inventario)</label>
+                            <select id="lote-ventas">
+                                <option value="">-- Seleccione un producto primero --</option>
+                            </select>
+                        </div>
                         <div style="display:flex; gap:10px;">
                             <div class="admin-form-group" style="flex:2;">
                                 <label>Precio Unit. ($)</label>
@@ -241,7 +278,7 @@
                         <h4>Lista de Compra</h4>
                         <div class="cart-list-container">
                             <table class="cart-table">
-                                <thead><tr><th>Prod.</th><th>Cant.</th><th>Sub.</th><th>Imp.</th><th>Total</th><th></th></tr></thead>
+                                <thead><tr><th>Prod.</th><th>Lote</th><th>Cant.</th><th>Sub.</th><th>Total</th><th></th></tr></thead>
                                 <tbody id="lista-items-ventas"></tbody>
                             </table>
                         </div>
@@ -271,7 +308,7 @@
             <!-- Módulo: COMPRAS -->
             <div id="mod-compras" class="modulo-admin">
                 <h3 class="admin-title">
-                    <span>Registro de Compras (Inventario)</span>
+                    <span>Registro de Compras (Entrada de Inventario)</span>
                     <span id="badge-edit-compras" style="display:none; background:var(--warning); color:white; font-size:0.8rem; padding:4px 8px; border-radius:5px;">Modo Edición</span>
                 </h3>
                 
@@ -289,6 +326,17 @@
                             <input type="text" id="busqueda-prod-compras" class="autocomplete-input" placeholder="🔍 Escribe para buscar..." autocomplete="off">
                             <div id="autocomplete-list-compras" class="autocomplete-items"></div>
                         </div>
+                        <!-- NUEVO: Entradas para Lote y Fecha en Compras -->
+                        <div style="display:flex; gap:10px;">
+                            <div class="admin-form-group" style="flex:1;">
+                                <label>Lote Asignado</label>
+                                <input type="text" id="lote-compras" placeholder="Ej: L-001">
+                            </div>
+                            <div class="admin-form-group" style="flex:1;">
+                                <label>Fecha de Vencimiento</label>
+                                <input type="date" id="venc-compras">
+                            </div>
+                        </div>
                         <div style="display:flex; gap:10px;">
                             <div class="admin-form-group" style="flex:2;">
                                 <label>Costo Unit. ($)</label>
@@ -303,14 +351,14 @@
                                 <input type="number" id="cant-compras" value="1" min="1">
                             </div>
                         </div>
-                        <button class="btn-admin-action btn-add-list" onclick="agregarItemAdmin('compras')">⬇ Añadir a la lista</button>
+                        <button class="btn-admin-action btn-add-list" onclick="agregarItemAdmin('compras')">⬇ Añadir al inventario local</button>
                     </div>
 
                     <div class="admin-form-box">
                         <h4>Lista de Ingreso</h4>
                         <div class="cart-list-container">
                             <table class="cart-table">
-                                <thead><tr><th>Prod.</th><th>Cant.</th><th>Sub.</th><th>Imp.</th><th>Total</th><th></th></tr></thead>
+                                <thead><tr><th>Prod.</th><th>Lote</th><th>Cant.</th><th>Sub.</th><th>Total</th><th></th></tr></thead>
                                 <tbody id="lista-items-compras"></tbody>
                             </table>
                         </div>
@@ -379,7 +427,7 @@
                         <h4>Presupuesto</h4>
                         <div class="cart-list-container">
                             <table class="cart-table">
-                                <thead><tr><th>Prod.</th><th>Cant.</th><th>Sub.</th><th>Imp.</th><th>Total</th><th></th></tr></thead>
+                                <thead><tr><th>Prod.</th><th>-</th><th>Cant.</th><th>Sub.</th><th>Total</th><th></th></tr></thead>
                                 <tbody id="lista-items-cotizaciones"></tbody>
                             </table>
                         </div>
@@ -416,10 +464,11 @@
                         <input type="text" id="concepto-ingresos" placeholder="Ej: Pago factura #123, Abono...">
                     </div>
                     <div class="admin-form-group">
-                        <label>Método</label>
-                        <select id="metodo-ingresos">
-                            <option value="Efectivo">Efectivo</option>
-                            <option value="Transferencia">Transferencia</option>
+                        <label>Forma de Pago</label>
+                        <select id="forma-pago-ingresos">
+                            <option value="Caja">Caja</option>
+                            <option value="Bancos">Bancos</option>
+                            <option value="A crédito">A crédito</option>
                         </select>
                     </div>
                     <div class="admin-form-group">
@@ -430,7 +479,7 @@
                 </div>
                 <div class="table-responsive">
                     <table class="admin-table">
-                        <thead><tr><th>Fecha</th><th>Tercero</th><th>Concepto</th><th>Método</th><th class="text-right">Monto</th><th>Acción</th></tr></thead>
+                        <thead><tr><th>Fecha</th><th>Tercero</th><th>Concepto</th><th>Forma Pago</th><th class="text-right">Monto</th><th>Acción</th></tr></thead>
                         <tbody id="tabla-ingresos"></tbody>
                     </table>
                 </div>
@@ -458,6 +507,14 @@
                         </select>
                     </div>
                     <div class="admin-form-group">
+                        <label>Forma de Pago</label>
+                        <select id="forma-pago-egresos">
+                            <option value="Caja">Caja</option>
+                            <option value="Bancos">Bancos</option>
+                            <option value="A crédito">A crédito</option>
+                        </select>
+                    </div>
+                    <div class="admin-form-group">
                         <label>Monto Pagado ($)</label>
                         <input type="number" id="monto-egresos" placeholder="0">
                     </div>
@@ -465,7 +522,7 @@
                 </div>
                 <div class="table-responsive">
                     <table class="admin-table">
-                        <thead><tr><th>Fecha</th><th>Tercero</th><th>Concepto</th><th>Categoría</th><th class="text-right">Monto</th><th>Acción</th></tr></thead>
+                        <thead><tr><th>Fecha</th><th>Tercero</th><th>Concepto</th><th>Categoría</th><th>Forma Pago</th><th class="text-right">Monto</th><th>Acción</th></tr></thead>
                         <tbody id="tabla-egresos"></tbody>
                     </table>
                 </div>
@@ -864,11 +921,117 @@
                 divItem.innerHTML = `<span><strong>${p.nombre}</strong></span> <span style="color:var(--accent); font-weight:bold;">$${parseInt(p.precio).toLocaleString()}</span>`;
                 divItem.addEventListener("click", function() {
                     input.value = p.nombre; document.getElementById(`precio-${modulo}`).value = p.precio; listContainer.innerHTML = "";
+                    
+                    // Si estamos en Ventas, buscar lotes disponibles
+                    if (modulo === 'ventas') {
+                        actualizarLotesDisponibles(p.nombre);
+                    }
                 });
                 listContainer.appendChild(divItem);
             });
         });
         document.addEventListener("click", function (e) { if(e.target !== input) { listContainer.innerHTML = ""; } });
+    }
+
+    // --- NUEVO: FUNCIONES DE INVENTARIO Y LOTES ---
+    
+    // Calcula el inventario global sumando compras y restando ventas en tiempo real
+    window.calcularInventarioGlobal = function() {
+        let inv = {};
+        
+        // Sumar compras
+        (window.adminRecordsCache.compras || []).forEach(compra => {
+            (compra.items || []).forEach(item => {
+                let key = `${item.nombre}_${item.lote || 'N/A'}`;
+                if(!inv[key]) {
+                    inv[key] = { nombre: item.nombre, lote: item.lote || 'N/A', vencimiento: item.vencimiento || '-', stock: 0 };
+                }
+                inv[key].stock += item.cant;
+            });
+        });
+
+        // Restar ventas
+        (window.adminRecordsCache.ventas || []).forEach(venta => {
+            (venta.items || []).forEach(item => {
+                let key = `${item.nombre}_${item.lote || 'N/A'}`;
+                if(inv[key]) inv[key].stock -= item.cant;
+            });
+        });
+
+        return Object.values(inv);
+    }
+
+    // Pinta la tabla general de inventario
+    window.renderizarInventario = function() {
+        const tbody = document.getElementById('tabla-inventario');
+        if(!tbody) return;
+        tbody.innerHTML = "";
+
+        const inventario = calcularInventarioGlobal();
+        
+        // Ordenar alfabéticamente por producto
+        inventario.sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+        if(inventario.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:gray;">No hay registros de inventario aún.</td></tr>`;
+            return;
+        }
+
+        const hoy = new Date();
+
+        inventario.forEach(item => {
+            let estadoHtml = "";
+            let colorFila = "";
+
+            if (item.stock <= 0) {
+                estadoHtml = `<span class="badge-status bg-gray">Agotado</span>`;
+                colorFila = "color: #9e9e9e;"; // Gris
+            } else {
+                if (item.vencimiento && item.vencimiento !== '-') {
+                    const fechaVenc = new Date(item.vencimiento);
+                    const diffTime = fechaVenc - hoy;
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    if (diffDays < 0) {
+                        estadoHtml = `<span class="badge-status bg-danger">Vencido</span>`;
+                        colorFila = "color: #c62828;"; // Rojo
+                    } else if (diffDays <= 30) {
+                        estadoHtml = `<span class="badge-status bg-warning">Por Vencer (${diffDays}d)</span>`;
+                    } else {
+                        estadoHtml = `<span class="badge-status bg-success">Normal</span>`;
+                    }
+                } else {
+                    estadoHtml = `<span class="badge-status bg-success">Normal</span>`;
+                }
+            }
+
+            tbody.innerHTML += `<tr style="${colorFila}">
+                <td><strong>${item.nombre}</strong></td>
+                <td>${item.lote}</td>
+                <td>${item.vencimiento}</td>
+                <td class="text-right" style="font-size:1.1rem; font-weight:bold;">${item.stock}</td>
+                <td>${estadoHtml}</td>
+            </tr>`;
+        });
+    }
+
+    // Llena el <select> en el módulo de ventas para elegir un lote válido
+    window.actualizarLotesDisponibles = function(nombreProd) {
+        const select = document.getElementById('lote-ventas');
+        select.innerHTML = '<option value="">-- Seleccione Lote --</option>';
+        
+        const inventario = calcularInventarioGlobal();
+        // Filtrar lotes de ese producto que tengan stock mayor a 0
+        const lotesDelProd = inventario.filter(i => i.nombre === nombreProd && i.stock > 0);
+        
+        if (lotesDelProd.length === 0) {
+            select.innerHTML = '<option value="">Sin stock disponible</option>';
+            return;
+        }
+        
+        lotesDelProd.forEach(l => {
+            select.innerHTML += `<option value="${l.lote}" data-stock="${l.stock}" data-venc="${l.vencimiento}">Lote: ${l.lote} (Disp: ${l.stock}) - Vence: ${l.vencimiento}</option>`;
+        });
     }
 
     // --- FUNCIONES DEL CARRITO DE TRANSACCIONES (POS) ---
@@ -886,16 +1049,48 @@
 
         if(!nombre || isNaN(precio) || isNaN(cant) || cant <= 0) return alert("Complete el producto, precio y una cantidad válida.");
 
+        let lote = "N/A";
+        let vencimiento = "-";
+
+        // Lógicas específicas de lotes
+        if (modulo === 'compras') {
+            lote = document.getElementById('lote-compras').value.trim();
+            vencimiento = document.getElementById('venc-compras').value;
+            if(!lote) return alert("Debe asignar un número o nombre de Lote para la compra.");
+            if(!vencimiento) return alert("Debe asignar una Fecha de Vencimiento.");
+        } else if (modulo === 'ventas') {
+            const loteSelect = document.getElementById('lote-ventas');
+            if (loteSelect.selectedIndex <= 0) return alert("Debe seleccionar un Lote con stock disponible.");
+            
+            const optionSeleccionada = loteSelect.options[loteSelect.selectedIndex];
+            lote = optionSeleccionada.value;
+            vencimiento = optionSeleccionada.getAttribute('data-venc');
+            let stockDisponible = parseInt(optionSeleccionada.getAttribute('data-stock'));
+
+            // Validar que no exceda el stock (contando lo que ya añadió al carrito en esta misma compra)
+            let cantEnCarrito = 0;
+            window.adminPOS.ventas.items.forEach(i => { if (i.nombre === nombre && i.lote === lote) cantEnCarrito += i.cant; });
+            
+            if (cant + cantEnCarrito > stockDisponible && !window.adminPOS.ventas.editId) {
+                return alert(`No puede vender más del stock. Disponible en lote ${lote}: ${stockDisponible}. Ya en carrito: ${cantEnCarrito}`);
+            }
+        }
+
         const subtotalBase = precio * cant;
         const valorImpuesto = subtotalBase * (impPerc / 100);
         const subtotalTotal = subtotalBase + valorImpuesto;
 
         window.adminPOS[modulo].items.push({ 
             id: Date.now(), nombre, precio, cant, 
-            impPerc, valorImpuesto, subtotalBase, subtotal: subtotalTotal 
+            impPerc, valorImpuesto, subtotalBase, subtotal: subtotalTotal,
+            lote, vencimiento
         });
 
+        // Limpiar
         productoInput.value = ""; precioInput.value = ""; cantInput.value = 1; impInput.value = 0;
+        if(modulo === 'compras') { document.getElementById('lote-compras').value = ""; document.getElementById('venc-compras').value = ""; }
+        if(modulo === 'ventas') { document.getElementById('lote-ventas').innerHTML = '<option value="">-- Seleccione un producto primero --</option>'; }
+
         calcularTotalesAdmin(modulo);
     }
 
@@ -911,20 +1106,20 @@
         let impuestosTotales = 0;
 
         window.adminPOS[modulo].items.forEach(item => {
-            // Compatibilidad con registros antiguos (si los hay)
             let bBase = item.subtotalBase || (item.precio * item.cant);
             let bImp = item.valorImpuesto || 0;
             let bTot = item.subtotal || bBase;
-            let bPerc = item.impPerc || 0;
-
+            
             subtotalGral += bBase;
             impuestosTotales += bImp;
 
+            let colLote = (modulo !== 'cotizaciones') ? `<td style="font-size:0.8rem; color:#666;">${item.lote || '-'}</td>` : `<td>-</td>`;
+
             tbody.innerHTML += `<tr>
                 <td style="font-size:0.85rem;">${item.nombre}</td>
+                ${colLote}
                 <td>${item.cant}</td>
                 <td>$${bBase.toLocaleString()}</td>
-                <td style="font-size:0.8rem; color:#888;">${bPerc}%</td>
                 <td style="font-weight:bold;">$${bTot.toLocaleString(undefined, {maximumFractionDigits: 2})}</td>
                 <td><button style="color:red; background:none; border:none; cursor:pointer;" onclick="eliminarItemAdmin('${modulo}', ${item.id})">✖</button></td>
             </tr>`;
@@ -969,18 +1164,13 @@
 
         try {
             if (window.adminPOS[modulo].editId) {
-                // ACTUALIZAR MODO EDICIÓN
                 await updateDoc(doc(db, 'artifacts', appId, 'users', userId, modulo, window.adminPOS[modulo].editId), transaccion);
             } else {
-                // CREAR NUEVO
                 transaccion.createdAt = Date.now();
                 await addDoc(collection(db, 'artifacts', appId, 'users', userId, modulo), transaccion);
             }
             
-            // Generar e Imprimir PDF
             generarPDFTransaccion(transaccion, modulo);
-
-            // Limpiar todo
             cancelarEdicionAdmin(modulo);
             document.getElementById(`persona-${modulo}`).value = "";
             
@@ -997,26 +1187,20 @@
     // --- EDICIÓN, RE-IMPRESIÓN Y PDF ---
 
     window.editarRegistroAdmin = function(modulo, docId) {
-        // Buscar el objeto en cache
         const registro = window.adminRecordsCache[modulo].find(r => r.id === docId);
         if(!registro) return alert("No se pudo cargar el registro.");
 
-        // Cargar datos en el form
         document.getElementById(`persona-${modulo}`).value = registro.persona;
-        
-        // Cargar carrito
         window.adminPOS[modulo].items = [...registro.items];
         window.adminPOS[modulo].editId = docId;
         calcularTotalesAdmin(modulo);
 
-        // Cambiar estilos a MODO EDICIÓN
         document.getElementById(`badge-edit-${modulo}`).style.display = 'inline-block';
         document.getElementById(`btn-cancel-${modulo}`).style.display = 'block';
         const btnSave = document.getElementById(`btn-save-${modulo}`);
         btnSave.innerText = "💾 Guardar Cambios e Imprimir";
         btnSave.style.background = "var(--warning)";
         
-        // Scroll hacia arriba
         document.getElementById(`mod-${modulo}`).scrollIntoView({ behavior: 'smooth' });
     }
 
@@ -1043,7 +1227,6 @@
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        // Cabecera
         doc.setFillColor(27, 94, 32); doc.rect(0, 0, 210, 20, 'F');
         doc.setTextColor(255, 255, 255); doc.setFontSize(16); doc.setFont("helvetica", "bold");
         
@@ -1054,32 +1237,30 @@
         
         doc.text(`${titulo} - ANIMAL PRO`, 105, 13, { align: "center" });
 
-        // Datos Generales
         doc.setTextColor(50); doc.setFontSize(11); doc.setFont("helvetica", "normal");
         let labelPersona = "Cliente:"; if(modulo === 'compras') labelPersona = "Proveedor:";
         
         doc.text(`Fecha: ${data.fecha}`, 15, 35);
         doc.text(`${labelPersona} ${data.persona}`, 15, 42);
         
-        // Tabla de Items usando AutoTable
         const bodyData = data.items.map(i => {
             let p = i.precio || 0;
             let sub = i.subtotalBase || (p * i.cant);
             let perc = i.impPerc || 0;
             let tot = i.subtotal || sub;
-            return [i.nombre, i.cant.toString(), `$${p.toLocaleString()}`, `${perc}%`, `$${tot.toLocaleString()}`];
+            let loteDato = i.lote || 'N/A';
+            return [i.nombre, loteDato, i.cant.toString(), `$${p.toLocaleString()}`, `${perc}%`, `$${tot.toLocaleString()}`];
         });
         
         doc.autoTable({
             startY: 50,
-            head: [['Producto', 'Cant.', 'Precio', 'Imp(%)', 'Total']],
+            head: [['Producto', 'Lote', 'Cant.', 'Precio', 'Imp(%)', 'Total']],
             body: bodyData,
             theme: 'striped',
-            headStyles: { fillColor: [37, 211, 102] }, // var(--primary)
-            styles: { fontSize: 10 }
+            headStyles: { fillColor: [37, 211, 102] }, 
+            styles: { fontSize: 9 }
         });
 
-        // Totales debajo de la tabla
         let finalY = doc.lastAutoTable.finalY + 10;
         doc.setFont("helvetica", "bold");
         doc.text(`Subtotal: $${data.subtotal.toLocaleString(undefined, {maximumFractionDigits:2})}`, 130, finalY);
@@ -1087,7 +1268,6 @@
         doc.setFontSize(14); doc.setTextColor(27, 94, 32);
         doc.text(`TOTAL: $${data.totalFinal.toLocaleString(undefined, {maximumFractionDigits:2})}`, 130, finalY + 17);
 
-        // Pie de página
         doc.setTextColor(150); doc.setFontSize(9); doc.setFont("helvetica", "normal");
         doc.text("Gracias por confiar en Animal Pro.", 105, 285, { align: "center" });
 
@@ -1100,7 +1280,7 @@
     window.abrirModalExcel = function(modulo) {
         moduloImportacion = modulo;
         document.getElementById('excel-modulo-text').innerText = modulo === 'ventas' ? 'VENTAS' : 'COMPRAS';
-        document.getElementById('input-excel').value = ""; // Limpiar input
+        document.getElementById('input-excel').value = ""; 
         document.getElementById('modal-excel').style.display = 'flex';
     }
 
@@ -1110,10 +1290,9 @@
 
     window.descargarPlantillaExcel = function() {
         const wb = XLSX.utils.book_new();
-        // Encabezados exactos que necesita el sistema
         const wsData = [
-            ["FECHA (DD/MM/YYYY)", "CLIENTE_PROVEEDOR", "PRODUCTO", "CANTIDAD", "PRECIO_UNITARIO", "IMPUESTO_PORCENTAJE"],
-            [obtenerFechaCorta(), moduloImportacion === 'ventas' ? "Juan Perez" : "Distribuidora XYZ", "Ejemplo Producto", 2, 50000, 0]
+            ["FECHA (DD/MM/YYYY)", "CLIENTE_PROVEEDOR", "PRODUCTO", "LOTE", "VENCIMIENTO (YYYY-MM-DD)", "CANTIDAD", "PRECIO_UNITARIO", "IMPUESTO_PORCENTAJE"],
+            [obtenerFechaCorta(), moduloImportacion === 'ventas' ? "Juan Perez" : "Distribuidora XYZ", "Ejemplo Producto", "L-001", "2025-12-31", 2, 50000, 0]
         ];
         const ws = XLSX.utils.aoa_to_sheet(wsData);
         XLSX.utils.book_append_sheet(wb, ws, "Plantilla");
@@ -1137,33 +1316,32 @@
                 const workbook = XLSX.read(data, {type: 'array'});
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
-                // Leer filas conservando el texto (para evitar que Excel rompa las fechas)
                 const rows = XLSX.utils.sheet_to_json(worksheet, {raw: false});
 
                 if(rows.length === 0) throw new Error("El archivo está vacío.");
 
                 let count = 0;
                 for(let row of rows) {
-                    // Extraer información asegurando compatibilidad de columnas
                     let fecha = row["FECHA (DD/MM/YYYY)"] || obtenerFechaCorta();
                     let persona = row["CLIENTE_PROVEEDOR"];
                     let producto = row["PRODUCTO"];
+                    let lote = row["LOTE"] || 'N/A';
+                    let vencimiento = row["VENCIMIENTO (YYYY-MM-DD)"] || '-';
                     let cant = parseInt(row["CANTIDAD"]);
                     let precio = parseFloat(row["PRECIO_UNITARIO"]);
                     let impPerc = parseFloat(row["IMPUESTO_PORCENTAJE"]) || 0;
 
-                    // Si falta información crucial, saltar fila
                     if(!persona || !producto || isNaN(cant) || isNaN(precio)) continue; 
 
                     let subtotalBase = precio * cant;
                     let valorImpuesto = subtotalBase * (impPerc / 100);
                     let subtotalTotal = subtotalBase + valorImpuesto;
 
-                    // Cada fila se trata como un comprobante único de 1 ítem en el historial
                     let item = { 
                         id: Date.now() + count, 
                         nombre: producto, precio, cant, impPerc, 
-                        valorImpuesto, subtotalBase, subtotal: subtotalTotal 
+                        valorImpuesto, subtotalBase, subtotal: subtotalTotal,
+                        lote, vencimiento
                     };
 
                     let transaccion = {
@@ -1171,12 +1349,11 @@
                         items: [item], fecha, createdAt: Date.now() + count, updatedAt: Date.now()
                     };
 
-                    // Guardar en Firebase
                     await addDoc(collection(db, 'artifacts', appId, 'users', userId, moduloImportacion), transaccion);
                     count++;
                 }
 
-                alert(`✅ Se han importado ${count} registros correctamente al historial de ${moduloImportacion}.`);
+                alert(`✅ Se han importado ${count} registros correctamente.`);
                 cerrarModalExcel();
             } catch (err) {
                 console.error(err);
@@ -1188,23 +1365,25 @@
         reader.readAsArrayBuffer(file);
     }
 
-    // --- FIREBASE FINANZAS (Egresos e Ingresos mantienen estructura simple) ---
+    // --- FIREBASE FINANZAS (Egresos e Ingresos) ---
     window.guardarFinanzas = async function(modulo) {
         if(!userId) return alert("Error de autenticación.");
         const tercero = document.getElementById(`tercero-${modulo}`).value;
         const concepto = document.getElementById(`concepto-${modulo}`).value;
         const monto = parseFloat(document.getElementById(`monto-${modulo}`).value);
-        const tipo = modulo === 'ingresos' ? document.getElementById('metodo-ingresos').value : document.getElementById('cat-egresos').value;
+        const formaPago = document.getElementById(`forma-pago-${modulo}`).value;
+        const tipo = modulo === 'egresos' ? document.getElementById('cat-egresos').value : '-';
+        
         if(!tercero || !concepto || isNaN(monto)) return alert("Complete todos los campos.");
 
         try {
-            await addDoc(collection(db, 'artifacts', appId, 'users', userId, modulo), { createdAt: Date.now(), fecha: obtenerFechaCorta(), tercero, concepto, tipo, total: monto });
+            await addDoc(collection(db, 'artifacts', appId, 'users', userId, modulo), { createdAt: Date.now(), fecha: obtenerFechaCorta(), tercero, concepto, tipo, formaPago, total: monto });
             document.getElementById(`tercero-${modulo}`).value = ""; document.getElementById(`concepto-${modulo}`).value = ""; document.getElementById(`monto-${modulo}`).value = "";
         } catch (error) { console.error("Error guardando:", error); }
     }
 
     window.borrarRegistro = async function(modulo, docId) {
-        if(!confirm("¿Eliminar este registro permanentemente de la nube?")) return;
+        if(!confirm("¿Eliminar este registro permanentemente de la nube? Esto afectará el inventario.")) return;
         try { await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, modulo, docId));
         } catch (error) { alert("Error eliminando."); }
     }
@@ -1219,8 +1398,12 @@
             snapshot.forEach(doc => { registros.push({ id: doc.id, ...doc.data() }); });
             registros.sort((a, b) => b.createdAt - a.createdAt);
             
-            // Guardar en caché global para poder editarlos o imprimirlos luego
             window.adminRecordsCache[modulo] = registros;
+            
+            // Renderizar inventario siempre que cambien compras o ventas
+            if(modulo === 'ventas' || modulo === 'compras') {
+                renderizarInventario();
+            }
             
             const tbody = document.getElementById(`tabla-${modulo}`);
             if(!tbody) return;
@@ -1228,13 +1411,20 @@
 
             registros.forEach(r => {
                 let tr = document.createElement('tr');
-                if(modulo === 'ingresos' || modulo === 'egresos') {
+                if(modulo === 'ingresos') {
+                    let pagoLabel = r.formaPago || r.tipo || 'N/A';
                     tr.innerHTML = `<td>${r.fecha}</td><td><strong>${r.tercero}</strong></td><td>${r.concepto}</td>
-                        <td><span style="background:#eee; padding:3px 8px; border-radius:5px; font-size:0.8rem;">${r.tipo}</span></td>
-                        <td class="text-right" style="color: ${modulo === 'ingresos' ? 'green' : 'red'}; font-weight:bold;">$${r.total.toLocaleString()}</td>
+                        <td><span style="background:#e3f2fd; color:#1565c0; padding:3px 8px; border-radius:5px; font-size:0.8rem; font-weight:bold;">${pagoLabel}</span></td>
+                        <td class="text-right" style="color: green; font-weight:bold;">$${r.total.toLocaleString()}</td>
+                        <td class="text-right"><button class="btn-table-action" style="color:red;" onclick="borrarRegistro('${modulo}', '${r.id}')" title="Borrar">✖</button></td>`;
+                } else if(modulo === 'egresos') {
+                    let pagoLabel = r.formaPago || 'N/A';
+                    tr.innerHTML = `<td>${r.fecha}</td><td><strong>${r.tercero}</strong></td><td>${r.concepto}</td>
+                        <td><span style="background:#eee; padding:3px 8px; border-radius:5px; font-size:0.8rem;">${r.tipo || '-'}</span></td>
+                        <td><span style="background:#e3f2fd; color:#1565c0; padding:3px 8px; border-radius:5px; font-size:0.8rem; font-weight:bold;">${pagoLabel}</span></td>
+                        <td class="text-right" style="color: red; font-weight:bold;">$${r.total.toLocaleString()}</td>
                         <td class="text-right"><button class="btn-table-action" style="color:red;" onclick="borrarRegistro('${modulo}', '${r.id}')" title="Borrar">✖</button></td>`;
                 } else {
-                    // Para los módulos transaccionales (Ventas, Compras, Cotizaciones)
                     let cantItems = r.items ? r.items.length : 0;
                     tr.innerHTML = `<td>${r.fecha}</td><td><strong>${r.persona}</strong></td><td>${cantItems} ítems</td>
                         <td class="text-right">$${(r.impuestoValor || 0).toLocaleString(undefined, {maximumFractionDigits:2})}</td>
