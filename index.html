@@ -1152,60 +1152,91 @@
     }
 
     // Funciones Autocompletar Estándar para Productos
+    function getKnownProducts() {
+        let known = new Map();
+        
+        // 1. Productos del catálogo público (Google Sheets)
+        productosGlobales.forEach(p => {
+            known.set(p.nombre.trim().toLowerCase(), { nombre: p.nombre, precio: parseInt(p.precio) || 0 });
+        });
+        
+        // 2. Historial de Ventas (Para recordar el último precio de venta de productos que NO están en el Excel público)
+        (window.adminRecordsCache.ventas || []).forEach(venta => {
+            (venta.items || []).forEach(item => {
+                let key = item.nombre.trim().toLowerCase();
+                // Si no está en el catálogo, o si su precio es 0, tomamos el precio de su última venta registrada
+                if (!known.has(key) || known.get(key).precio === 0) {
+                    known.set(key, { nombre: item.nombre, precio: parseInt(item.precio) || 0 });
+                }
+            });
+        });
+
+        // 3. Inventario general (compras) por si nunca se ha vendido ni está en el catálogo
+        calcularInventarioGlobal().forEach(i => {
+            let key = i.nombre.trim().toLowerCase();
+            if (!known.has(key)) {
+                known.set(key, { nombre: i.nombre, precio: 0 });
+            }
+        });
+        
+        return Array.from(known.values());
+    }
+
     function configurarAutocomplete(modulo) {
         const input = document.getElementById(`busqueda-prod-${modulo}`);
         const listContainer = document.getElementById(`autocomplete-list-${modulo}`);
+        if(!input || !listContainer) return;
+        
         input.addEventListener("input", function(e) {
-            let val = this.value.trim(); listContainer.innerHTML = ""; 
-            if (!val) { document.getElementById(`precio-${modulo}`).value = ""; return false; }
+            let val = this.value.trim(); 
+            listContainer.innerHTML = ""; 
+            if (!val) { 
+                const precioInput = document.getElementById(`precio-${modulo}`);
+                if (precioInput) precioInput.value = ""; 
+                return false; 
+            }
             
-            let matchesCatalog = productosGlobales.filter(p => p.nombre.toLowerCase().includes(val.toLowerCase()));
+            let knownProducts = getKnownProducts();
+            
+            // Búsqueda inteligente por fragmentos (Ej: "aqua 5kg" encuentra "AQUAZIX GFA X5KG")
+            let searchTerms = val.toLowerCase().split(' ').filter(t => t.trim() !== '');
+            let matches = knownProducts.filter(p => {
+                let n = p.nombre.toLowerCase();
+                return searchTerms.every(term => n.includes(term));
+            });
+            
+            let matchExacto = false;
+            
             let invActual = [];
             if(modulo === 'ventas' || modulo === 'compras' || modulo === 'cotizaciones') {
                 invActual = calcularInventarioGlobal();
             }
 
-            let combinedMatches = [];
-            let addedNames = new Set();
-            
-            // 1. Agregar del catálogo de Google Sheets
-            matchesCatalog.forEach(p => {
-                combinedMatches.push({ nombre: p.nombre, precio: p.precio });
-                addedNames.add(p.nombre.trim().toLowerCase());
-            });
-            
-            // 2. Agregar del inventario histórico (por si tienen nombres distintos como "X5KG" vs "X5G")
-            invActual.forEach(invItem => {
-                if(invItem.nombre.toLowerCase().includes(val.toLowerCase())) {
-                    if(!addedNames.has(invItem.nombre.trim().toLowerCase())) {
-                        combinedMatches.push({ nombre: invItem.nombre, precio: 0 });
-                        addedNames.add(invItem.nombre.trim().toLowerCase());
-                    }
-                }
-            });
-
-            combinedMatches.forEach(p => {
+            matches.forEach(p => {
                 let divItem = document.createElement("div");
+                if(p.nombre.toLowerCase() === val.toLowerCase()) matchExacto = true;
                 
-                // Mostrar el stock total al buscar
+                // Mostrar el stock total al buscar en Compras y Ventas
                 let stockHtml = "";
-                if(modulo === 'ventas') {
+                if(modulo === 'ventas' || modulo === 'compras') {
                     let totalStock = invActual.filter(i => i.nombre.trim().toLowerCase() === p.nombre.trim().toLowerCase() && i.stock > 0).reduce((sum, i) => sum + i.stock, 0);
                     stockHtml = `<div style="font-size:0.8rem; margin-top:3px; color:${totalStock > 0 ? 'var(--accent)' : 'red'}">Total disponible: <b>${totalStock}</b> unid.</div>`;
                 }
 
                 divItem.innerHTML = `<div style="flex-grow:1;"><span><strong>${p.nombre}</strong></span>${stockHtml}</div> <span style="color:var(--accent); font-weight:bold; padding-left:10px;">$${parseInt(p.precio || 0).toLocaleString()}</span>`;
                 
-                // Usamos mousedown en vez de click para evitar que el blur cierre la lista antes de tiempo
                 divItem.addEventListener("mousedown", function(evt) {
                     evt.preventDefault();
                     input.value = p.nombre; 
-                    if (p.precio > 0 || document.getElementById(`precio-${modulo}`).value === "") {
-                        document.getElementById(`precio-${modulo}`).value = p.precio || "";
+                    
+                    const precioInput = document.getElementById(`precio-${modulo}`);
+                    // Si encontramos un precio guardado, lo asignamos automáticamente
+                    if (precioInput && (p.precio > 0 || precioInput.value === "")) {
+                        precioInput.value = p.precio || "";
                     }
+                    
                     listContainer.innerHTML = "";
                     
-                    // Si estamos en Ventas, buscar lotes disponibles instantáneamente
                     if (modulo === 'ventas') {
                         actualizarLotesDisponibles(p.nombre);
                     }
@@ -1213,11 +1244,46 @@
                 });
                 listContainer.appendChild(divItem);
             });
+
+            if (!matchExacto) {
+                let divAdd = document.createElement("div");
+                divAdd.style.backgroundColor = "#e8f5e9";
+                divAdd.innerHTML = `<span style="color:var(--primary); font-weight:bold;">➕ Usar "${val}" como producto nuevo</span>`;
+                
+                divAdd.addEventListener("mousedown", function(evt) {
+                    evt.preventDefault();
+                    input.value = val;
+                    input.setAttribute("data-new-product", "true");
+                    listContainer.innerHTML = "";
+                    input.blur();
+                });
+                listContainer.appendChild(divAdd);
+            } else {
+                input.removeAttribute("data-new-product");
+            }
         });
         
-        // Retraso ligero al quitar el foco para permitir el clic
         input.addEventListener("blur", function () { 
-            setTimeout(() => listContainer.innerHTML = "", 150); 
+            setTimeout(() => {
+                let currentVal = this.value.trim();
+                if (currentVal !== "") {
+                    if (this.getAttribute("data-new-product") === "true") {
+                        this.removeAttribute("data-new-product");
+                    } else {
+                        let knownProducts = getKnownProducts();
+                        let exactMatch = knownProducts.find(p => p.nombre.toLowerCase() === currentVal.toLowerCase());
+                        if (!exactMatch) {
+                            this.value = ""; 
+                            const precioInput = document.getElementById(`precio-${modulo}`);
+                            if(precioInput) precioInput.value = "";
+                            alert("⚠️ Producto no válido. Por favor, selecciona un producto del catálogo de la lista o haz clic en '➕ Usar como producto nuevo'.");
+                        } else {
+                            this.value = exactMatch.nombre; 
+                        }
+                    }
+                }
+                listContainer.innerHTML = "";
+            }, 150); 
         });
     }
 
