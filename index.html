@@ -97,7 +97,7 @@
         .modulo-admin { display: none; }
         .modulo-admin.active { display: block; }
         
-        .admin-title { color: var(--accent); margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;}
+        .admin-title { color: var(--accent); margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;}
         
         /* Contenedores de Formulario tipo POS */
         .admin-pos-layout { display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 25px; }
@@ -194,6 +194,7 @@
     <div class="admin-layout">
         <!-- Sidebar Menú -->
         <div class="admin-sidebar">
+            <button class="admin-tab" onclick="cambiarModulo('terceros', this)">👥 Terceros</button>
             <button class="admin-tab" onclick="cambiarModulo('inventario', this)">📦 Inventario</button>
             <button class="admin-tab active" onclick="cambiarModulo('ventas', this)">🛒 Ventas</button>
             <button class="admin-tab" onclick="cambiarModulo('compras', this)">🏭 Compras</button>
@@ -205,19 +206,71 @@
         <!-- Área de Contenido -->
         <div class="admin-content-area">
 
-            <!-- Módulo: INVENTARIO -->
-            <div id="mod-inventario" class="modulo-admin">
-                <h3 class="admin-title">Control de Inventario y Lotes</h3>
-                <p style="color: #666; font-size: 0.95rem;">Aquí puedes ver tus existencias disponibles (se calcula restando las Ventas a tus Compras).</p>
+            <!-- NUEVO MÓDULO: TERCEROS -->
+            <div id="mod-terceros" class="modulo-admin">
+                <h3 class="admin-title">Directorio Único de Terceros</h3>
+                
+                <div class="admin-form-box" style="margin-bottom: 25px;">
+                    <h4>Registrar Nuevo Tercero</h4>
+                    <p style="font-size:0.85rem; color:#666; margin-top:0;">Agrega personas o empresas con las que interactúas. Este directorio sirve tanto para compras como para ventas.</p>
+                    <div style="display:flex; gap:10px;">
+                        <div class="admin-form-group" style="flex:2;">
+                            <label>Nombre Completo / Razón Social</label>
+                            <input type="text" id="nombre-tercero" placeholder="Nombre completo">
+                        </div>
+                        <div class="admin-form-group" style="flex:1;">
+                            <label>Documento / NIT</label>
+                            <input type="text" id="doc-tercero" placeholder="Opcional">
+                        </div>
+                        <div class="admin-form-group" style="flex:1;">
+                            <label>Teléfono</label>
+                            <input type="text" id="tel-tercero" placeholder="Opcional">
+                        </div>
+                    </div>
+                    <button class="btn-admin-action" style="margin-top:20px;" onclick="guardarTercero()">➕ Guardar Tercero en Directorio</button>
+                </div>
+
+                <h4 style="border-bottom: 1px solid #ddd; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                    <span>Directorio Guardado</span>
+                    <button class="btn-admin-action" style="width: auto; padding: 8px 15px; margin: 0; font-size: 0.9rem; background: var(--info);" onclick="abrirModalExcel('terceros')">📥 Importar Excel</button>
+                </h4>
                 <div class="table-responsive">
                     <table class="admin-table">
+                        <thead><tr><th>Nombre</th><th>Documento</th><th>Teléfono</th><th class="text-right">Acción</th></tr></thead>
+                        <tbody id="tabla-terceros">
+                            <tr><td colspan="4" style="text-align:center; color:gray;">Cargando terceros...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Módulo: INVENTARIO -->
+            <div id="mod-inventario" class="modulo-admin">
+                <h3 class="admin-title">
+                    <span>Control de Inventario y Lotes</span>
+                    <button class="btn-admin-action" style="width: auto; padding: 6px 12px; margin: 0; font-size: 0.85rem; background: var(--danger);" onclick="mostrarAlertaVencimientos()">🚨 Ver Vencimientos</button>
+                </h3>
+                <p style="color: #666; font-size: 0.95rem;">Aquí puedes ver tus existencias disponibles (se calcula restando las Ventas a tus Compras).</p>
+                
+                <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
+                    <div class="admin-form-group" style="flex-grow: 1; margin-bottom: 0; min-width: 200px;">
+                        <input type="text" id="busqueda-inventario" class="autocomplete-input" style="padding: 14px 20px; border-radius: 20px; width: 100%; box-sizing: border-box; font-size: 1rem; border: 1px solid #dfe1e5;" placeholder="🔍 Buscar producto, lote o estado en inventario..." onkeyup="buscarInventario()">
+                    </div>
+                    <label style="font-size: 0.9rem; color: #555; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; background: white; padding: 12px 15px; border-radius: 15px; border: 1px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
+                        <input type="checkbox" id="check-agotados" onchange="renderizarInventario()" style="width: 18px; height: 18px; margin: 0; cursor: pointer;">
+                        Mostrar Agotados
+                    </label>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="admin-table" style="user-select: none;">
                         <thead>
                             <tr>
-                                <th>Producto</th>
-                                <th>Lote</th>
-                                <th>Vencimiento</th>
-                                <th class="text-right">Stock Disponible</th>
-                                <th>Estado</th>
+                                <th onclick="ordenarInventario('nombre')" style="cursor:pointer;" title="Ordenar por Producto">Producto <span id="sort-icon-nombre" style="font-size:0.8rem; margin-left:3px;">▲</span></th>
+                                <th onclick="ordenarInventario('lote')" style="cursor:pointer;" title="Ordenar por Lote">Lote <span id="sort-icon-lote" style="font-size:0.8rem; margin-left:3px;"></span></th>
+                                <th onclick="ordenarInventario('vencimiento')" style="cursor:pointer;" title="Ordenar por Vencimiento">Vencimiento <span id="sort-icon-vencimiento" style="font-size:0.8rem; margin-left:3px;"></span></th>
+                                <th onclick="ordenarInventario('stock')" style="cursor:pointer;" class="text-right" title="Ordenar por Stock">Stock Disponible <span id="sort-icon-stock" style="font-size:0.8rem; margin-left:3px;"></span></th>
+                                <th onclick="ordenarInventario('estado')" style="cursor:pointer;" title="Ordenar por Estado">Estado <span id="sort-icon-estado" style="font-size:0.8rem; margin-left:3px;"></span></th>
                             </tr>
                         </thead>
                         <tbody id="tabla-inventario">
@@ -238,9 +291,16 @@
                     <!-- Formulario de Ingreso -->
                     <div class="admin-form-box">
                         <h4>Detalles Principales</h4>
-                        <div class="admin-form-group">
-                            <label>Cliente</label>
-                            <input type="text" id="persona-ventas" placeholder="Nombre del cliente">
+                        <div style="display:flex; gap:10px;">
+                            <div class="admin-form-group" style="flex:2;">
+                                <label>Tercero (Busca o añade uno nuevo de la lista)</label>
+                                <input type="text" id="persona-ventas" class="autocomplete-input" placeholder="🔍 Escribe para buscar tercero..." autocomplete="off">
+                                <div id="autocomplete-list-persona-ventas" class="autocomplete-items"></div>
+                            </div>
+                            <div class="admin-form-group" style="flex:1;">
+                                <label>N° Factura</label>
+                                <input type="text" id="doc-num-ventas" placeholder="Auto">
+                            </div>
                         </div>
                         
                         <h4 style="margin-top:20px;">Añadir Producto</h4>
@@ -249,7 +309,6 @@
                             <input type="text" id="busqueda-prod-ventas" class="autocomplete-input" placeholder="🔍 Escribe para buscar..." autocomplete="off">
                             <div id="autocomplete-list-ventas" class="autocomplete-items"></div>
                         </div>
-                        <!-- NUEVO: Selección de Lote para la venta -->
                         <div class="admin-form-group">
                             <label>Lote Disponible (Inventario)</label>
                             <select id="lote-ventas">
@@ -299,7 +358,7 @@
                 </h4>
                 <div class="table-responsive">
                     <table class="admin-table">
-                        <thead><tr><th>Fecha</th><th>Cliente</th><th>Artículos</th><th class="text-right">Impuesto</th><th class="text-right">Total Final</th><th class="text-right">Acciones</th></tr></thead>
+                        <thead><tr><th>Fecha</th><th>N° Doc</th><th>Cliente</th><th>Artículos</th><th class="text-right">Impuesto</th><th class="text-right">Total Final</th><th class="text-right">Acciones</th></tr></thead>
                         <tbody id="tabla-ventas"></tbody>
                     </table>
                 </div>
@@ -315,9 +374,16 @@
                 <div class="admin-pos-layout">
                     <div class="admin-form-box">
                         <h4>Detalles Principales</h4>
-                        <div class="admin-form-group">
-                            <label>Proveedor</label>
-                            <input type="text" id="persona-compras" placeholder="Nombre del proveedor">
+                        <div style="display:flex; gap:10px;">
+                            <div class="admin-form-group" style="flex:2;">
+                                <label>Tercero (Busca o añade uno nuevo de la lista)</label>
+                                <input type="text" id="persona-compras" class="autocomplete-input" placeholder="🔍 Escribe para buscar tercero..." autocomplete="off">
+                                <div id="autocomplete-list-persona-compras" class="autocomplete-items"></div>
+                            </div>
+                            <div class="admin-form-group" style="flex:1;">
+                                <label>N° Soporte</label>
+                                <input type="text" id="doc-num-compras" placeholder="Auto">
+                            </div>
                         </div>
                         
                         <h4 style="margin-top:20px;">Añadir Producto</h4>
@@ -326,7 +392,6 @@
                             <input type="text" id="busqueda-prod-compras" class="autocomplete-input" placeholder="🔍 Escribe para buscar..." autocomplete="off">
                             <div id="autocomplete-list-compras" class="autocomplete-items"></div>
                         </div>
-                        <!-- NUEVO: Entradas para Lote y Fecha en Compras -->
                         <div style="display:flex; gap:10px;">
                             <div class="admin-form-group" style="flex:1;">
                                 <label>Lote Asignado</label>
@@ -379,7 +444,7 @@
                 </h4>
                 <div class="table-responsive">
                     <table class="admin-table">
-                        <thead><tr><th>Fecha</th><th>Proveedor</th><th>Artículos</th><th class="text-right">Impuesto</th><th class="text-right">Costo Final</th><th class="text-right">Acciones</th></tr></thead>
+                        <thead><tr><th>Fecha</th><th>N° Doc</th><th>Proveedor</th><th>Artículos</th><th class="text-right">Impuesto</th><th class="text-right">Costo Final</th><th class="text-right">Acciones</th></tr></thead>
                         <tbody id="tabla-compras"></tbody>
                     </table>
                 </div>
@@ -395,9 +460,16 @@
                 <div class="admin-pos-layout">
                     <div class="admin-form-box">
                         <h4>Datos del Prospecto</h4>
-                        <div class="admin-form-group">
-                            <label>Interesado (Cliente)</label>
-                            <input type="text" id="persona-cotizaciones" placeholder="Nombre prospecto">
+                        <div style="display:flex; gap:10px;">
+                            <div class="admin-form-group" style="flex:2;">
+                                <label>Tercero (Busca o añade uno nuevo de la lista)</label>
+                                <input type="text" id="persona-cotizaciones" class="autocomplete-input" placeholder="🔍 Escribe para buscar tercero..." autocomplete="off">
+                                <div id="autocomplete-list-persona-cotizaciones" class="autocomplete-items"></div>
+                            </div>
+                            <div class="admin-form-group" style="flex:1;">
+                                <label>N° Cotización</label>
+                                <input type="text" id="doc-num-cotizaciones" placeholder="Auto">
+                            </div>
                         </div>
                         
                         <h4 style="margin-top:20px;">Añadir Producto</h4>
@@ -445,7 +517,7 @@
                 <h4 style="margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">Historial de Cotizaciones</h4>
                 <div class="table-responsive">
                     <table class="admin-table">
-                        <thead><tr><th>Fecha</th><th>Prospecto</th><th>Artículos</th><th class="text-right">Impuesto</th><th class="text-right">Total Final</th><th class="text-right">Acciones</th></tr></thead>
+                        <thead><tr><th>Fecha</th><th>N° Doc</th><th>Prospecto</th><th>Artículos</th><th class="text-right">Impuesto</th><th class="text-right">Total Final</th><th class="text-right">Acciones</th></tr></thead>
                         <tbody id="tabla-cotizaciones"></tbody>
                     </table>
                 </div>
@@ -455,9 +527,16 @@
             <div id="mod-ingresos" class="modulo-admin">
                 <h3 class="admin-title">Ingresos y Recuperación de Cartera</h3>
                 <div class="admin-form">
-                    <div class="admin-form-group">
-                        <label>Tercero (Cliente/Entidad)</label>
-                        <input type="text" id="tercero-ingresos" placeholder="Nombre de quien paga">
+                    <div style="display:flex; gap:10px;">
+                        <div class="admin-form-group" style="flex:2;">
+                            <label>Tercero (Busca o añade uno nuevo de la lista)</label>
+                            <input type="text" id="tercero-ingresos" class="autocomplete-input" placeholder="🔍 Escribe para buscar tercero..." autocomplete="off">
+                            <div id="autocomplete-list-tercero-ingresos" class="autocomplete-items"></div>
+                        </div>
+                        <div class="admin-form-group" style="flex:1;">
+                            <label>N° Recibo</label>
+                            <input type="text" id="doc-num-ingresos" placeholder="Auto">
+                        </div>
                     </div>
                     <div class="admin-form-group">
                         <label>Concepto</label>
@@ -479,7 +558,7 @@
                 </div>
                 <div class="table-responsive">
                     <table class="admin-table">
-                        <thead><tr><th>Fecha</th><th>Tercero</th><th>Concepto</th><th>Forma Pago</th><th class="text-right">Monto</th><th>Acción</th></tr></thead>
+                        <thead><tr><th>Fecha</th><th>N° Doc</th><th>Tercero</th><th>Concepto</th><th>Forma Pago</th><th class="text-right">Monto</th><th>Acción</th></tr></thead>
                         <tbody id="tabla-ingresos"></tbody>
                     </table>
                 </div>
@@ -489,9 +568,16 @@
             <div id="mod-egresos" class="modulo-admin">
                 <h3 class="admin-title">Egresos y Pagos de Tesorería</h3>
                 <div class="admin-form">
-                    <div class="admin-form-group">
-                        <label>Tercero (Proveedor/Destino)</label>
-                        <input type="text" id="tercero-egresos" placeholder="A quién se le paga">
+                    <div style="display:flex; gap:10px;">
+                        <div class="admin-form-group" style="flex:2;">
+                            <label>Tercero (Busca o añade uno nuevo de la lista)</label>
+                            <input type="text" id="tercero-egresos" class="autocomplete-input" placeholder="🔍 Escribe para buscar tercero..." autocomplete="off">
+                            <div id="autocomplete-list-tercero-egresos" class="autocomplete-items"></div>
+                        </div>
+                        <div class="admin-form-group" style="flex:1;">
+                            <label>N° Comprobante</label>
+                            <input type="text" id="doc-num-egresos" placeholder="Auto">
+                        </div>
                     </div>
                     <div class="admin-form-group">
                         <label>Concepto</label>
@@ -522,7 +608,7 @@
                 </div>
                 <div class="table-responsive">
                     <table class="admin-table">
-                        <thead><tr><th>Fecha</th><th>Tercero</th><th>Concepto</th><th>Categoría</th><th>Forma Pago</th><th class="text-right">Monto</th><th>Acción</th></tr></thead>
+                        <thead><tr><th>Fecha</th><th>N° Doc</th><th>Tercero</th><th>Concepto</th><th>Categoría</th><th>Forma Pago</th><th class="text-right">Monto</th><th>Acción</th></tr></thead>
                         <tbody id="tabla-egresos"></tbody>
                     </table>
                 </div>
@@ -583,7 +669,7 @@
     </div>
 </div>
 
-<!-- NUEVO: MODAL EXCEL -->
+<!-- MODAL EXCEL -->
 <div id="modal-excel" class="modal-overlay">
     <div class="modal-content">
         <h2 style="margin-top:0; color: var(--accent);">Importar desde Excel</h2>
@@ -591,7 +677,7 @@
         <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
         
         <h4 style="margin-bottom: 5px;">Paso 1: Descargar Plantilla</h4>
-        <p style="font-size:0.85rem; color:#555; margin-top:0;">Descarga el modelo, llénalo sin cambiar el nombre de las columnas (cabeceras).</p>
+        <p style="font-size:0.85rem; color:#555; margin-top:0;">Descarga el modelo, llénalo sin cambiar el nombre de las columnas.</p>
         <button class="btn-admin-action" style="background:var(--info); margin-bottom:20px; width:100%; font-size:1rem;" onclick="descargarPlantillaExcel()">📥 Descargar Plantilla .xlsx</button>
         
         <h4 style="margin-bottom: 5px;">Paso 2: Subir Archivo Lleno</h4>
@@ -599,6 +685,50 @@
         <button id="btn-procesar-excel" class="btn-admin-action" style="background:var(--primary); width:100%; font-size:1rem;" onclick="procesarExcel()">🚀 Subir Registros</button>
         
         <button style="background:none; border:none; color:grey; width:100%; margin-top:15px; cursor:pointer;" onclick="cerrarModalExcel()">Cancelar</button>
+    </div>
+</div>
+
+<!-- MODAL ALERTA VENCIMIENTOS -->
+<div id="modal-vencimientos" class="modal-overlay">
+    <div class="modal-content" style="max-width: 600px;">
+        <h2 style="margin-top:0; color: var(--danger); display: flex; align-items: center; gap: 10px;">
+            🚨 Alerta de Vencimientos
+        </h2>
+        <p style="color:#666; font-size:0.9rem;">Productos que vencen en los próximos 3 meses (90 días) o que ya están vencidos.</p>
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 10px;">
+            <table class="admin-table">
+                <thead style="position: sticky; top: 0; z-index: 10;">
+                    <tr><th>Producto</th><th>Lote</th><th style="text-align:center;">Stock</th><th>Estado</th></tr>
+                </thead>
+                <tbody id="tabla-vencimientos-alert"></tbody>
+            </table>
+        </div>
+        <button class="btn-enviar" style="background:var(--primary);" onclick="cerrarModalVencimientos()">ENTENDIDO</button>
+    </div>
+</div>
+
+<!-- NUEVO: MODAL TERCERO -->
+<div id="modal-nuevo-tercero" class="modal-overlay">
+    <div class="modal-content">
+        <h2 style="margin-top:0; color: var(--accent);">Nuevo Tercero</h2>
+        <p style="color:#666; font-size:0.9rem; margin-top:0;">Completa los datos para añadirlo a tu directorio.</p>
+        
+        <input type="hidden" id="mnt-input-id">
+        <div class="admin-form-group">
+            <label>Nombre Completo / Razón Social</label>
+            <input type="text" id="mnt-nombre" placeholder="Nombre completo">
+        </div>
+        <div class="admin-form-group">
+            <label>Documento / NIT</label>
+            <input type="text" id="mnt-doc" placeholder="Opcional">
+        </div>
+        <div class="admin-form-group">
+            <label>Teléfono</label>
+            <input type="text" id="mnt-tel" placeholder="Opcional">
+        </div>
+        
+        <button class="btn-enviar" onclick="guardarTerceroDesdeModal()">GUARDAR TERCERO</button>
+        <button style="background:none; border:none; color:grey; width:100%; margin-top:10px; cursor:pointer;" onclick="cerrarModalNuevoTercero()">Cancelar</button>
     </div>
 </div>
 
@@ -625,11 +755,17 @@
         compras: { items: [], editId: null },
         cotizaciones: { items: [], editId: null }
     };
-    window.adminRecordsCache = { ventas: [], compras: [], cotizaciones: [] }; // Para poder buscar y editar rápido
+    window.adminRecordsCache = { ventas: [], compras: [], cotizaciones: [], ingresos: [], egresos: [], terceros: [] }; 
+    window.modulosCargados = { ventas: false, compras: false }; // Para saber cuándo chequear los vencimientos
+    window.vencimientosMostrados = false; // Evita que la alerta salga múltiples veces
+
+    // Variables de Búsqueda y Ordenamiento para Inventario
+    let invSearchQuery = "";
+    let invSortCol = "nombre";
+    let invSortAsc = true;
 
     // --- INICIALIZACIÓN GENERAL ---
     window.onload = async function() {
-        // 1. Inicializar Firebase con tu configuración
         try {
             const firebaseConfig = {
                 apiKey: "AIzaSyCaRUfZfwZzJ_69FAxodhQk4ehYPONOKsc",
@@ -644,10 +780,12 @@
             db = getFirestore(app);
             appId = "animalpro"; 
 
-            // Escuchar el estado de autenticación
             onAuthStateChanged(auth, (user) => {
                 if(user) {
                     userId = user.uid;
+                    window.vencimientosMostrados = false; 
+                    window.modulosCargados = { ventas: false, compras: false };
+
                     document.getElementById('vista-publica').style.display = 'none';
                     document.getElementById('admin-panel').style.display = 'block';
                     document.body.style.background = "var(--admin-bg)";
@@ -655,11 +793,20 @@
                     unsuscribeFunctions.forEach(unsub => unsub());
                     unsuscribeFunctions = [];
 
+                    unsuscribeFunctions.push(suscribirDatos('terceros')); 
                     unsuscribeFunctions.push(suscribirDatos('ventas'));
                     unsuscribeFunctions.push(suscribirDatos('compras'));
                     unsuscribeFunctions.push(suscribirDatos('ingresos'));
                     unsuscribeFunctions.push(suscribirDatos('egresos'));
                     unsuscribeFunctions.push(suscribirDatos('cotizaciones'));
+                    
+                    // Inicializar Autocompletado ESTRICTO de Terceros
+                    configurarAutocompleteTerceros('persona-ventas', 'autocomplete-list-persona-ventas');
+                    configurarAutocompleteTerceros('persona-compras', 'autocomplete-list-persona-compras');
+                    configurarAutocompleteTerceros('persona-cotizaciones', 'autocomplete-list-persona-cotizaciones');
+                    configurarAutocompleteTerceros('tercero-ingresos', 'autocomplete-list-tercero-ingresos');
+                    configurarAutocompleteTerceros('tercero-egresos', 'autocomplete-list-tercero-egresos');
+
                 } else {
                     userId = null;
                     unsuscribeFunctions.forEach(unsub => unsub());
@@ -672,7 +819,6 @@
             });
         } catch(e) { console.error("Error al iniciar Firebase:", e); }
 
-        // 2. Cargar base de datos del Catálogo de Sheets
         try {
             const res = await fetch(WEB_APP_URL + "?getData=1");
             const data = await res.json();
@@ -909,31 +1055,207 @@
         document.querySelectorAll('.modulo-admin').forEach(m => m.classList.remove('active')); document.getElementById('mod-' + idModulo).classList.add('active');
     }
 
+    // Funciones Autocompletar Estándar para Productos
     function configurarAutocomplete(modulo) {
         const input = document.getElementById(`busqueda-prod-${modulo}`);
         const listContainer = document.getElementById(`autocomplete-list-${modulo}`);
         input.addEventListener("input", function(e) {
-            let val = this.value; listContainer.innerHTML = ""; 
+            let val = this.value.trim(); listContainer.innerHTML = ""; 
             if (!val) { document.getElementById(`precio-${modulo}`).value = ""; return false; }
-            let matches = productosGlobales.filter(p => p.nombre.toLowerCase().includes(val.toLowerCase()));
-            matches.forEach(p => {
+            
+            let matchesCatalog = productosGlobales.filter(p => p.nombre.toLowerCase().includes(val.toLowerCase()));
+            let invActual = [];
+            if(modulo === 'ventas' || modulo === 'compras' || modulo === 'cotizaciones') {
+                invActual = calcularInventarioGlobal();
+            }
+
+            let combinedMatches = [];
+            let addedNames = new Set();
+            
+            // 1. Agregar del catálogo de Google Sheets
+            matchesCatalog.forEach(p => {
+                combinedMatches.push({ nombre: p.nombre, precio: p.precio });
+                addedNames.add(p.nombre.trim().toLowerCase());
+            });
+            
+            // 2. Agregar del inventario histórico (por si tienen nombres distintos como "X5KG" vs "X5G")
+            invActual.forEach(invItem => {
+                if(invItem.nombre.toLowerCase().includes(val.toLowerCase())) {
+                    if(!addedNames.has(invItem.nombre.trim().toLowerCase())) {
+                        combinedMatches.push({ nombre: invItem.nombre, precio: 0 });
+                        addedNames.add(invItem.nombre.trim().toLowerCase());
+                    }
+                }
+            });
+
+            combinedMatches.forEach(p => {
                 let divItem = document.createElement("div");
-                divItem.innerHTML = `<span><strong>${p.nombre}</strong></span> <span style="color:var(--accent); font-weight:bold;">$${parseInt(p.precio).toLocaleString()}</span>`;
-                divItem.addEventListener("click", function() {
-                    input.value = p.nombre; document.getElementById(`precio-${modulo}`).value = p.precio; listContainer.innerHTML = "";
+                
+                // Mostrar el stock total al buscar
+                let stockHtml = "";
+                if(modulo === 'ventas') {
+                    let totalStock = invActual.filter(i => i.nombre.trim().toLowerCase() === p.nombre.trim().toLowerCase() && i.stock > 0).reduce((sum, i) => sum + i.stock, 0);
+                    stockHtml = `<div style="font-size:0.8rem; margin-top:3px; color:${totalStock > 0 ? 'var(--accent)' : 'red'}">Total disponible: <b>${totalStock}</b> unid.</div>`;
+                }
+
+                divItem.innerHTML = `<div style="flex-grow:1;"><span><strong>${p.nombre}</strong></span>${stockHtml}</div> <span style="color:var(--accent); font-weight:bold; padding-left:10px;">$${parseInt(p.precio || 0).toLocaleString()}</span>`;
+                
+                // Usamos mousedown en vez de click para evitar que el blur cierre la lista antes de tiempo
+                divItem.addEventListener("mousedown", function(evt) {
+                    evt.preventDefault();
+                    input.value = p.nombre; 
+                    if (p.precio > 0 || document.getElementById(`precio-${modulo}`).value === "") {
+                        document.getElementById(`precio-${modulo}`).value = p.precio || "";
+                    }
+                    listContainer.innerHTML = "";
                     
-                    // Si estamos en Ventas, buscar lotes disponibles
+                    // Si estamos en Ventas, buscar lotes disponibles instantáneamente
                     if (modulo === 'ventas') {
                         actualizarLotesDisponibles(p.nombre);
                     }
+                    input.blur();
                 });
                 listContainer.appendChild(divItem);
             });
         });
-        document.addEventListener("click", function (e) { if(e.target !== input) { listContainer.innerHTML = ""; } });
+        
+        // Retraso ligero al quitar el foco para permitir el clic
+        input.addEventListener("blur", function () { 
+            setTimeout(() => listContainer.innerHTML = "", 150); 
+        });
     }
 
-    // --- NUEVO: FUNCIONES DE INVENTARIO Y LOTES ---
+    // Autocompletado ESTRICTO para Terceros
+    function configurarAutocompleteTerceros(inputId, listContainerId) {
+        const input = document.getElementById(inputId);
+        const listContainer = document.getElementById(listContainerId);
+        if(!input || !listContainer) return;
+        
+        input.addEventListener("input", function(e) {
+            let val = this.value.trim(); listContainer.innerHTML = ""; 
+            if (!val) return false; 
+            
+            let matches = (window.adminRecordsCache.terceros || []).filter(t => t.nombre.toLowerCase().includes(val.toLowerCase()));
+            let matchExacto = false;
+
+            matches.forEach(t => {
+                let divItem = document.createElement("div");
+                divItem.innerHTML = `<span><strong>${t.nombre}</strong></span>`;
+                if(t.nombre.toLowerCase() === val.toLowerCase()) matchExacto = true;
+                
+                // Mousedown se usa en lugar de click para no quitar el foco del input antes de procesar
+                divItem.addEventListener("mousedown", function(evt) {
+                    evt.preventDefault(); 
+                    input.value = t.nombre; 
+                    listContainer.innerHTML = "";
+                    input.blur();
+                });
+                listContainer.appendChild(divItem);
+            });
+
+            // Si el nombre que escribe no es idéntico a ninguno guardado, le sugerimos crearlo
+            if (!matchExacto) {
+                let divAdd = document.createElement("div");
+                divAdd.style.backgroundColor = "#e8f5e9";
+                divAdd.innerHTML = `<span style="color:var(--primary); font-weight:bold;">➕ Añadir "${val}" y completar datos</span>`;
+                
+                divAdd.addEventListener("mousedown", function(evt) {
+                    evt.preventDefault();
+                    listContainer.innerHTML = "";
+                    input.blur();
+                    abrirModalNuevoTercero(val, inputId);
+                });
+                listContainer.appendChild(divAdd);
+            }
+        });
+
+        // Validación estricta: Si se sale del input, comprobamos si el texto coincide exactamente con un tercero en la BD
+        input.addEventListener("blur", function() {
+            setTimeout(() => {
+                // Si el modal de nuevo tercero está abierto, no borrar el input todavía
+                if(document.getElementById('modal-nuevo-tercero').style.display === 'flex') return;
+
+                let currentVal = this.value.trim();
+                if (currentVal !== "") {
+                    let exactMatch = (window.adminRecordsCache.terceros || []).find(t => t.nombre.toLowerCase() === currentVal.toLowerCase());
+                    if (!exactMatch) {
+                        this.value = ""; // Borramos el input porque no lo eligió ni lo creó
+                        alert("⚠️ Tercero no registrado. Búscalo en la lista o presiona '➕ Añadir' al escribir su nombre para llenar sus datos.");
+                    } else {
+                        this.value = exactMatch.nombre; // Aseguramos usar las mayúsculas correctas
+                    }
+                }
+                listContainer.innerHTML = "";
+            }, 150);
+        });
+    }
+
+    // Funciones de Terceros (Manual y Modal)
+    window.guardarTercero = async function() {
+        if(!userId) return alert("Error de autenticación.");
+        const nombre = document.getElementById('nombre-tercero').value.trim();
+        const documento = document.getElementById('doc-tercero').value.trim();
+        const telefono = document.getElementById('tel-tercero').value.trim();
+
+        if(!nombre) return alert("El nombre completo o razón social es obligatorio.");
+
+        try {
+            await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'terceros'), { 
+                createdAt: Date.now(), nombre, documento, telefono 
+            });
+            document.getElementById('nombre-tercero').value = ""; 
+            document.getElementById('doc-tercero').value = ""; 
+            document.getElementById('tel-tercero').value = "";
+            alert("Tercero guardado exitosamente.");
+        } catch (error) { console.error("Error guardando tercero:", error); }
+    }
+
+    window.abrirModalNuevoTercero = function(nombreSug, inputId) {
+        document.getElementById('mnt-nombre').value = nombreSug;
+        document.getElementById('mnt-doc').value = '';
+        document.getElementById('mnt-tel').value = '';
+        document.getElementById('mnt-input-id').value = inputId;
+        document.getElementById('modal-nuevo-tercero').style.display = 'flex';
+    }
+
+    window.cerrarModalNuevoTercero = function() {
+        document.getElementById('modal-nuevo-tercero').style.display = 'none';
+        // Limpiamos el input que disparó esto porque el usuario canceló
+        let inputId = document.getElementById('mnt-input-id').value;
+        if(inputId) document.getElementById(inputId).value = '';
+    }
+
+    window.guardarTerceroDesdeModal = async function() {
+        if(!userId) return alert("Error de autenticación.");
+        const nombre = document.getElementById('mnt-nombre').value.trim();
+        const documento = document.getElementById('mnt-doc').value.trim();
+        const telefono = document.getElementById('mnt-tel').value.trim();
+        const inputId = document.getElementById('mnt-input-id').value;
+
+        if(!nombre) return alert("El nombre es obligatorio.");
+
+        try {
+            let btn = document.querySelector('#modal-nuevo-tercero .btn-enviar');
+            btn.disabled = true; btn.innerText = "⏳ GUARDANDO...";
+            
+            await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'terceros'), { 
+                createdAt: Date.now(), nombre, documento, telefono 
+            });
+            
+            // Llenar el input original automáticamente
+            if(inputId) {
+                document.getElementById(inputId).value = nombre;
+            }
+            
+            cerrarModalNuevoTercero();
+            btn.disabled = false; btn.innerText = "GUARDAR TERCERO";
+        } catch (error) { 
+            console.error(error); alert("Error al guardar."); 
+        }
+    }
+
+
+    // --- FUNCIONES DE INVENTARIO Y LOTES ---
     
     // Calcula el inventario global sumando compras y restando ventas en tiempo real
     window.calcularInventarioGlobal = function() {
@@ -942,9 +1264,11 @@
         // Sumar compras
         (window.adminRecordsCache.compras || []).forEach(compra => {
             (compra.items || []).forEach(item => {
-                let key = `${item.nombre}_${item.lote || 'N/A'}`;
+                let rawName = item.nombre || 'Desconocido';
+                let normName = rawName.trim().toLowerCase();
+                let key = `${normName}_${item.lote || 'N/A'}`;
                 if(!inv[key]) {
-                    inv[key] = { nombre: item.nombre, lote: item.lote || 'N/A', vencimiento: item.vencimiento || '-', stock: 0 };
+                    inv[key] = { nombre: rawName, lote: item.lote || 'N/A', vencimiento: item.vencimiento || '-', stock: 0 };
                 }
                 inv[key].stock += item.cant;
             });
@@ -953,12 +1277,30 @@
         // Restar ventas
         (window.adminRecordsCache.ventas || []).forEach(venta => {
             (venta.items || []).forEach(item => {
-                let key = `${item.nombre}_${item.lote || 'N/A'}`;
+                let rawName = item.nombre || 'Desconocido';
+                let normName = rawName.trim().toLowerCase();
+                let key = `${normName}_${item.lote || 'N/A'}`;
                 if(inv[key]) inv[key].stock -= item.cant;
             });
         });
 
         return Object.values(inv);
+    }
+
+    // Funciones de búsqueda y ordenamiento de inventario
+    window.buscarInventario = function() {
+        invSearchQuery = document.getElementById('busqueda-inventario').value.toLowerCase();
+        renderizarInventario();
+    }
+
+    window.ordenarInventario = function(columna) {
+        if (invSortCol === columna) {
+            invSortAsc = !invSortAsc; // Cambia el orden si se da clic en la misma columna
+        } else {
+            invSortCol = columna;
+            invSortAsc = true; // Por defecto ascendente al cambiar de columna
+        }
+        renderizarInventario();
     }
 
     // Pinta la tabla general de inventario
@@ -967,25 +1309,14 @@
         if(!tbody) return;
         tbody.innerHTML = "";
 
-        const inventario = calcularInventarioGlobal();
-        
-        // Ordenar alfabéticamente por producto
-        inventario.sort((a, b) => a.nombre.localeCompare(b.nombre));
-
-        if(inventario.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:gray;">No hay registros de inventario aún.</td></tr>`;
-            return;
-        }
-
+        let inventario = calcularInventarioGlobal();
         const hoy = new Date();
 
+        // 1. Asignar 'estadoTexto' y 'estadoNivel' (para ordenar jerárquicamente) a cada ítem
         inventario.forEach(item => {
-            let estadoHtml = "";
-            let colorFila = "";
-
             if (item.stock <= 0) {
-                estadoHtml = `<span class="badge-status bg-gray">Agotado</span>`;
-                colorFila = "color: #9e9e9e;"; // Gris
+                item.estadoTexto = "Agotado";
+                item.estadoNivel = 1; // Prioridad Agotado
             } else {
                 if (item.vencimiento && item.vencimiento !== '-') {
                     const fechaVenc = new Date(item.vencimiento);
@@ -993,27 +1324,146 @@
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
                     if (diffDays < 0) {
-                        estadoHtml = `<span class="badge-status bg-danger">Vencido</span>`;
-                        colorFila = "color: #c62828;"; // Rojo
+                        item.estadoTexto = "Vencido";
+                        item.estadoNivel = 2; // Prioridad Vencido
                     } else if (diffDays <= 30) {
-                        estadoHtml = `<span class="badge-status bg-warning">Por Vencer (${diffDays}d)</span>`;
+                        item.estadoTexto = `Por Vencer (${diffDays}d)`;
+                        item.estadoNivel = 3; // Prioridad Por Vencer
+                    } else {
+                        item.estadoTexto = "Normal";
+                        item.estadoNivel = 4; // Prioridad Normal
+                    }
+                } else {
+                    item.estadoTexto = "Normal";
+                    item.estadoNivel = 4;
+                }
+            }
+        });
+
+        // 1.5 Ocultar los que tienen stock en cero (a menos que se marque la casilla)
+        const mostrarAgotados = document.getElementById('check-agotados') && document.getElementById('check-agotados').checked;
+        if (!mostrarAgotados) {
+            inventario = inventario.filter(item => item.stock > 0);
+        }
+
+        // 2. Filtrar por búsqueda
+        if (invSearchQuery) {
+            inventario = inventario.filter(item => 
+                item.nombre.toLowerCase().includes(invSearchQuery) || 
+                item.lote.toLowerCase().includes(invSearchQuery) ||
+                item.estadoTexto.toLowerCase().includes(invSearchQuery)
+            );
+        }
+
+        // 3. Ordenar el arreglo
+        inventario.sort((a, b) => {
+            let valA = a[invSortCol];
+            let valB = b[invSortCol];
+
+            if (invSortCol === 'stock') {
+                return invSortAsc ? valA - valB : valB - valA;
+            } else if (invSortCol === 'estado') {
+                return invSortAsc ? a.estadoNivel - b.estadoNivel : b.estadoNivel - a.estadoNivel;
+            } else {
+                if (valA === null || valA === undefined) valA = '';
+                if (valB === null || valB === undefined) valB = '';
+                return invSortAsc ? valA.toString().localeCompare(valB.toString()) : valB.toString().localeCompare(valA.toString());
+            }
+        });
+
+        // Actualizar iconos de ordenamiento en las cabeceras
+        ['nombre', 'lote', 'vencimiento', 'stock', 'estado'].forEach(col => {
+            const el = document.getElementById(`sort-icon-${col}`);
+            if (el) el.innerHTML = (invSortCol === col) ? (invSortAsc ? "▲" : "▼") : "";
+        });
+
+        if(inventario.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:gray;">${invSearchQuery ? 'No se encontraron resultados para la búsqueda.' : 'No hay registros de inventario aún.'}</td></tr>`;
+            // IMPORTANTE: Continuar, no retornar todavía, para poder chequear la alerta automática.
+        } else {
+            inventario.forEach(item => {
+                let estadoHtml = "";
+                let colorFila = "";
+
+                if (item.stock <= 0) {
+                    estadoHtml = `<span class="badge-status bg-gray">Agotado</span>`;
+                    colorFila = "color: #9e9e9e;"; 
+                } else {
+                    if (item.estadoTexto === "Vencido") {
+                        estadoHtml = `<span class="badge-status bg-danger">Vencido</span>`;
+                        colorFila = "color: #c62828;"; 
+                    } else if (item.estadoTexto.startsWith("Por Vencer")) {
+                        estadoHtml = `<span class="badge-status bg-warning">${item.estadoTexto}</span>`;
                     } else {
                         estadoHtml = `<span class="badge-status bg-success">Normal</span>`;
                     }
-                } else {
-                    estadoHtml = `<span class="badge-status bg-success">Normal</span>`;
                 }
-            }
 
-            tbody.innerHTML += `<tr style="${colorFila}">
-                <td><strong>${item.nombre}</strong></td>
-                <td>${item.lote}</td>
-                <td>${item.vencimiento}</td>
-                <td class="text-right" style="font-size:1.1rem; font-weight:bold;">${item.stock}</td>
-                <td>${estadoHtml}</td>
-            </tr>`;
-        });
+                tbody.innerHTML += `<tr style="${colorFila}">
+                    <td><strong>${item.nombre}</strong></td>
+                    <td>${item.lote}</td>
+                    <td>${item.vencimiento}</td>
+                    <td class="text-right" style="font-size:1.1rem; font-weight:bold;">${item.stock}</td>
+                    <td>${estadoHtml}</td>
+                </tr>`;
+            });
+        }
+
+        // Lógica de Vencimientos Automáticos al Entrar
+        if (!window.vencimientosMostrados && window.modulosCargados.compras && window.modulosCargados.ventas) {
+            window.vencimientosMostrados = true; // Solo lo hacemos 1 vez por inicio de sesión
+            setTimeout(() => {
+                mostrarAlertaVencimientos(true);
+            }, 1000); // 1 seg de espera para que se asiente la vista
+        }
     }
+
+    // NUEVO: Funciones de Alerta de Vencimientos
+    window.mostrarAlertaVencimientos = function(esAuto = false) {
+        const inventario = calcularInventarioGlobal();
+        const hoy = new Date();
+        
+        let itemsProximos = inventario.filter(item => {
+            if (item.stock <= 0 || !item.vencimiento || item.vencimiento === '-') return false;
+            const fechaVenc = new Date(item.vencimiento);
+            const diffDays = Math.ceil((fechaVenc - hoy) / (1000 * 60 * 60 * 24));
+            return diffDays <= 90; // 90 días = 3 meses (aproximadamente)
+        });
+
+        // Si es una alerta automática y no hay vencimientos, no molestamos al usuario
+        if (esAuto && itemsProximos.length === 0) return;
+
+        const tbodyAlert = document.getElementById('tabla-vencimientos-alert');
+        tbodyAlert.innerHTML = "";
+
+        if (itemsProximos.length === 0) {
+            tbodyAlert.innerHTML = `<tr><td colspan="4" style="text-align:center; color:green; padding: 25px;">✅ ¡Todo está en orden! No tienes productos próximos a vencer.</td></tr>`;
+        } else {
+            // Ordenar para mostrar los vencidos o más urgentes primero
+            itemsProximos.sort((a,b) => new Date(a.vencimiento) - new Date(b.vencimiento));
+            
+            itemsProximos.forEach(item => {
+                const diffDays = Math.ceil((new Date(item.vencimiento) - hoy) / (1000 * 60 * 60 * 24));
+                let badge = "";
+                if(diffDays < 0) badge = `<span class="badge-status bg-danger" style="color:white; background:#c62828;">¡Vencido!</span>`;
+                else if(diffDays <= 30) badge = `<span class="badge-status bg-danger" style="color:white; background:#e53935;">Faltan ${diffDays} días</span>`;
+                else badge = `<span class="badge-status bg-warning" style="color:black; background:#ff9800;">Faltan ${diffDays} días</span>`;
+
+                tbodyAlert.innerHTML += `<tr>
+                    <td><strong>${item.nombre}</strong></td>
+                    <td style="color:#666;">${item.lote}</td>
+                    <td style="text-align:center; font-weight:bold;">${item.stock}</td>
+                    <td>${badge}</td>
+                </tr>`;
+            });
+        }
+        document.getElementById('modal-vencimientos').style.display = 'flex';
+    }
+
+    window.cerrarModalVencimientos = function() {
+        document.getElementById('modal-vencimientos').style.display = 'none';
+    }
+
 
     // Llena el <select> en el módulo de ventas para elegir un lote válido
     window.actualizarLotesDisponibles = function(nombreProd) {
@@ -1021,8 +1471,8 @@
         select.innerHTML = '<option value="">-- Seleccione Lote --</option>';
         
         const inventario = calcularInventarioGlobal();
-        // Filtrar lotes de ese producto que tengan stock mayor a 0
-        const lotesDelProd = inventario.filter(i => i.nombre === nombreProd && i.stock > 0);
+        // Filtrar lotes de ese producto que tengan stock mayor a 0 (Ignorando mayúsculas y espacios)
+        const lotesDelProd = inventario.filter(i => i.nombre.trim().toLowerCase() === nombreProd.trim().toLowerCase() && i.stock > 0);
         
         if (lotesDelProd.length === 0) {
             select.innerHTML = '<option value="">Sin stock disponible</option>';
@@ -1035,6 +1485,22 @@
     }
 
     // --- FUNCIONES DEL CARRITO DE TRANSACCIONES (POS) ---
+
+    // Autogenera un número consecutivo si no se digita ninguno
+    window.generarConsecutivoLocal = function(modulo) {
+        const prefijos = {ventas: 'VEN-', compras: 'COM-', cotizaciones: 'COT-', ingresos: 'RC-', egresos: 'CE-'};
+        const prefijo = prefijos[modulo] || 'DOC-';
+        if(!window.adminRecordsCache[modulo] || window.adminRecordsCache[modulo].length === 0) return prefijo + '0001';
+        
+        let maxNum = 0;
+        window.adminRecordsCache[modulo].forEach(r => {
+            if(r.numeroDoc && r.numeroDoc.startsWith(prefijo)) {
+                let numPart = parseInt(r.numeroDoc.replace(prefijo, ''));
+                if(!isNaN(numPart) && numPart > maxNum) maxNum = numPart;
+            }
+        });
+        return prefijo + (maxNum + 1).toString().padStart(4, '0');
+    }
 
     window.agregarItemAdmin = function(modulo) {
         const productoInput = document.getElementById(`busqueda-prod-${modulo}`);
@@ -1052,7 +1518,6 @@
         let lote = "N/A";
         let vencimiento = "-";
 
-        // Lógicas específicas de lotes
         if (modulo === 'compras') {
             lote = document.getElementById('lote-compras').value.trim();
             vencimiento = document.getElementById('venc-compras').value;
@@ -1067,9 +1532,8 @@
             vencimiento = optionSeleccionada.getAttribute('data-venc');
             let stockDisponible = parseInt(optionSeleccionada.getAttribute('data-stock'));
 
-            // Validar que no exceda el stock (contando lo que ya añadió al carrito en esta misma compra)
             let cantEnCarrito = 0;
-            window.adminPOS.ventas.items.forEach(i => { if (i.nombre === nombre && i.lote === lote) cantEnCarrito += i.cant; });
+            window.adminPOS.ventas.items.forEach(i => { if (i.nombre.trim().toLowerCase() === nombre.trim().toLowerCase() && i.lote === lote) cantEnCarrito += i.cant; });
             
             if (cant + cantEnCarrito > stockDisponible && !window.adminPOS.ventas.editId) {
                 return alert(`No puede vender más del stock. Disponible en lote ${lote}: ${stockDisponible}. Ya en carrito: ${cantEnCarrito}`);
@@ -1138,8 +1602,17 @@
         if(!userId) return alert("Error de autenticación.");
         
         const persona = document.getElementById(`persona-${modulo}`).value.trim();
-        if(!persona) return alert("Por favor, ingrese el nombre del Cliente/Proveedor.");
+        if(!persona) return alert("Por favor, selecciona o ingresa el nombre del Tercero.");
         if(window.adminPOS[modulo].items.length === 0) return alert("Debe añadir al menos un producto a la lista.");
+
+        // Manejo del número de documento (Consecutivo)
+        let numeroDoc = document.getElementById(`doc-num-${modulo}`).value.trim();
+        if (!numeroDoc && !window.adminPOS[modulo].editId) {
+            numeroDoc = generarConsecutivoLocal(modulo); // Autogenerar si es nuevo y está vacío
+        } else if (!numeroDoc && window.adminPOS[modulo].editId) {
+             const existente = window.adminRecordsCache[modulo].find(r => r.id === window.adminPOS[modulo].editId);
+             numeroDoc = existente && existente.numeroDoc ? existente.numeroDoc : generarConsecutivoLocal(modulo);
+        }
 
         let subtotal = 0;
         let impuestoValor = 0;
@@ -1150,6 +1623,7 @@
         const totalFinal = subtotal + impuestoValor;
 
         const transaccion = {
+            numeroDoc,
             persona,
             impuestoValor: impuestoValor,
             subtotal: subtotal,
@@ -1173,6 +1647,7 @@
             generarPDFTransaccion(transaccion, modulo);
             cancelarEdicionAdmin(modulo);
             document.getElementById(`persona-${modulo}`).value = "";
+            document.getElementById(`doc-num-${modulo}`).value = "";
             
         } catch (error) { 
             console.error(error); alert("Error guardando datos."); 
@@ -1191,6 +1666,7 @@
         if(!registro) return alert("No se pudo cargar el registro.");
 
         document.getElementById(`persona-${modulo}`).value = registro.persona;
+        document.getElementById(`doc-num-${modulo}`).value = registro.numeroDoc || '';
         window.adminPOS[modulo].items = [...registro.items];
         window.adminPOS[modulo].editId = docId;
         calcularTotalesAdmin(modulo);
@@ -1211,6 +1687,10 @@
         
         document.getElementById(`badge-edit-${modulo}`).style.display = 'none';
         document.getElementById(`btn-cancel-${modulo}`).style.display = 'none';
+        
+        document.getElementById(`persona-${modulo}`).value = '';
+        document.getElementById(`doc-num-${modulo}`).value = '';
+
         const btnSave = document.getElementById(`btn-save-${modulo}`);
         btnSave.style.background = "var(--primary)";
         if(modulo === 'ventas') btnSave.innerText = "💾 Guardar e Imprimir Factura";
@@ -1238,10 +1718,11 @@
         doc.text(`${titulo} - ANIMAL PRO`, 105, 13, { align: "center" });
 
         doc.setTextColor(50); doc.setFontSize(11); doc.setFont("helvetica", "normal");
-        let labelPersona = "Cliente:"; if(modulo === 'compras') labelPersona = "Proveedor:";
+        let labelPersona = "Tercero (Cliente/Proveedor):";
         
         doc.text(`Fecha: ${data.fecha}`, 15, 35);
         doc.text(`${labelPersona} ${data.persona}`, 15, 42);
+        doc.text(`N° Doc: ${data.numeroDoc || 'N/A'}`, 15, 49);
         
         const bodyData = data.items.map(i => {
             let p = i.precio || 0;
@@ -1253,7 +1734,7 @@
         });
         
         doc.autoTable({
-            startY: 50,
+            startY: 55,
             head: [['Producto', 'Lote', 'Cant.', 'Precio', 'Imp(%)', 'Total']],
             body: bodyData,
             theme: 'striped',
@@ -1279,7 +1760,8 @@
 
     window.abrirModalExcel = function(modulo) {
         moduloImportacion = modulo;
-        document.getElementById('excel-modulo-text').innerText = modulo === 'ventas' ? 'VENTAS' : 'COMPRAS';
+        let text = modulo === 'ventas' ? 'VENTAS' : (modulo === 'compras' ? 'COMPRAS' : 'TERCEROS');
+        document.getElementById('excel-modulo-text').innerText = text;
         document.getElementById('input-excel').value = ""; 
         document.getElementById('modal-excel').style.display = 'flex';
     }
@@ -1290,10 +1772,21 @@
 
     window.descargarPlantillaExcel = function() {
         const wb = XLSX.utils.book_new();
-        const wsData = [
-            ["FECHA (DD/MM/YYYY)", "CLIENTE_PROVEEDOR", "PRODUCTO", "LOTE", "VENCIMIENTO (YYYY-MM-DD)", "CANTIDAD", "PRECIO_UNITARIO", "IMPUESTO_PORCENTAJE"],
-            [obtenerFechaCorta(), moduloImportacion === 'ventas' ? "Juan Perez" : "Distribuidora XYZ", "Ejemplo Producto", "L-001", "2025-12-31", 2, 50000, 0]
-        ];
+        let wsData = [];
+        
+        if (moduloImportacion === 'terceros') {
+            wsData = [
+                ["NOMBRE_COMPLETO", "DOCUMENTO_NIT", "TELEFONO"],
+                ["Juan Perez", "123456789", "3001234567"]
+            ];
+        } else {
+            const numEjemplo = moduloImportacion === 'ventas' ? 'VEN-0001' : 'COM-0001';
+            wsData = [
+                ["FECHA (DD/MM/YYYY)", "N° DOCUMENTO", "CLIENTE_PROVEEDOR", "PRODUCTO", "LOTE", "VENCIMIENTO (YYYY-MM-DD)", "CANTIDAD", "PRECIO_UNITARIO", "IMPUESTO_PORCENTAJE"],
+                [obtenerFechaCorta(), numEjemplo, moduloImportacion === 'ventas' ? "Juan Perez" : "Distribuidora XYZ", "Ejemplo Producto", "L-001", "2025-12-31", 2, 50000, 0]
+            ];
+        }
+        
         const ws = XLSX.utils.aoa_to_sheet(wsData);
         XLSX.utils.book_append_sheet(wb, ws, "Plantilla");
         XLSX.writeFile(wb, `Plantilla_${moduloImportacion.toUpperCase()}.xlsx`);
@@ -1321,39 +1814,70 @@
                 if(rows.length === 0) throw new Error("El archivo está vacío.");
 
                 let count = 0;
-                for(let row of rows) {
-                    let fecha = row["FECHA (DD/MM/YYYY)"] || obtenerFechaCorta();
-                    let persona = row["CLIENTE_PROVEEDOR"];
-                    let producto = row["PRODUCTO"];
-                    let lote = row["LOTE"] || 'N/A';
-                    let vencimiento = row["VENCIMIENTO (YYYY-MM-DD)"] || '-';
-                    let cant = parseInt(row["CANTIDAD"]);
-                    let precio = parseFloat(row["PRECIO_UNITARIO"]);
-                    let impPerc = parseFloat(row["IMPUESTO_PORCENTAJE"]) || 0;
+                
+                if (moduloImportacion === 'terceros') {
+                    for(let row of rows) {
+                        let nombre = row["NOMBRE_COMPLETO"];
+                        let documento = row["DOCUMENTO_NIT"] || "";
+                        let telefono = row["TELEFONO"] || "";
+                        
+                        if(!nombre) continue; 
+                        
+                        let existe = (window.adminRecordsCache.terceros || []).find(t => t.nombre.toLowerCase() === nombre.toLowerCase());
+                        
+                        if (!existe) {
+                            await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'terceros'), { 
+                                createdAt: Date.now() + count, nombre, documento, telefono 
+                            });
+                            count++;
+                        }
+                    }
+                } else {
+                    const prefijoBase = (moduloImportacion === 'ventas' ? 'VEN-' : 'COM-') + Date.now().toString().slice(-5);
 
-                    if(!persona || !producto || isNaN(cant) || isNaN(precio)) continue; 
+                    for(let row of rows) {
+                        let fecha = row["FECHA (DD/MM/YYYY)"] || obtenerFechaCorta();
+                        let numeroDoc = row["N° DOCUMENTO"] || (prefijoBase + count); // Si no viene en Excel, asigna uno único
+                        let persona = row["CLIENTE_PROVEEDOR"];
+                        let producto = row["PRODUCTO"];
+                        let lote = row["LOTE"] || 'N/A';
+                        let vencimiento = row["VENCIMIENTO (YYYY-MM-DD)"] || '-';
+                        let cant = parseInt(row["CANTIDAD"]);
+                        let precio = parseFloat(row["PRECIO_UNITARIO"]);
+                        let impPerc = parseFloat(row["IMPUESTO_PORCENTAJE"]) || 0;
 
-                    let subtotalBase = precio * cant;
-                    let valorImpuesto = subtotalBase * (impPerc / 100);
-                    let subtotalTotal = subtotalBase + valorImpuesto;
+                        if(!persona || !producto || isNaN(cant) || isNaN(precio)) continue; 
 
-                    let item = { 
-                        id: Date.now() + count, 
-                        nombre: producto, precio, cant, impPerc, 
-                        valorImpuesto, subtotalBase, subtotal: subtotalTotal,
-                        lote, vencimiento
-                    };
+                        let subtotalBase = precio * cant;
+                        let valorImpuesto = subtotalBase * (impPerc / 100);
+                        let subtotalTotal = subtotalBase + valorImpuesto;
 
-                    let transaccion = {
-                        persona, impuestoValor: valorImpuesto, subtotal: subtotalBase, totalFinal: subtotalTotal,
-                        items: [item], fecha, createdAt: Date.now() + count, updatedAt: Date.now()
-                    };
+                        let item = { 
+                            id: Date.now() + count, 
+                            nombre: producto, precio, cant, impPerc, 
+                            valorImpuesto, subtotalBase, subtotal: subtotalTotal,
+                            lote, vencimiento
+                        };
 
-                    await addDoc(collection(db, 'artifacts', appId, 'users', userId, moduloImportacion), transaccion);
-                    count++;
+                        let transaccion = {
+                            numeroDoc, persona, impuestoValor: valorImpuesto, subtotal: subtotalBase, totalFinal: subtotalTotal,
+                            items: [item], fecha, createdAt: Date.now() + count, updatedAt: Date.now()
+                        };
+
+                        // Auto-crear tercero silenciosamente en subidas de Excel si no existe
+                        let existeTercero = (window.adminRecordsCache.terceros || []).find(t => t.nombre.toLowerCase() === persona.toLowerCase());
+                        if(!existeTercero) {
+                            await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'terceros'), {
+                                createdAt: Date.now() + count, nombre: persona, documento: '', telefono: ''
+                            });
+                        }
+
+                        await addDoc(collection(db, 'artifacts', appId, 'users', userId, moduloImportacion), transaccion);
+                        count++;
+                    }
                 }
 
-                alert(`✅ Se han importado ${count} registros correctamente.`);
+                alert(`✅ Se han importado/creado ${count} registros correctamente.`);
                 cerrarModalExcel();
             } catch (err) {
                 console.error(err);
@@ -1368,22 +1892,30 @@
     // --- FIREBASE FINANZAS (Egresos e Ingresos) ---
     window.guardarFinanzas = async function(modulo) {
         if(!userId) return alert("Error de autenticación.");
-        const tercero = document.getElementById(`tercero-${modulo}`).value;
+        const tercero = document.getElementById(`tercero-${modulo}`).value.trim();
         const concepto = document.getElementById(`concepto-${modulo}`).value;
         const monto = parseFloat(document.getElementById(`monto-${modulo}`).value);
         const formaPago = document.getElementById(`forma-pago-${modulo}`).value;
         const tipo = modulo === 'egresos' ? document.getElementById('cat-egresos').value : '-';
         
-        if(!tercero || !concepto || isNaN(monto)) return alert("Complete todos los campos.");
+        let numeroDoc = document.getElementById(`doc-num-${modulo}`).value.trim();
+        if (!numeroDoc) numeroDoc = generarConsecutivoLocal(modulo);
+
+        if(!tercero || !concepto || isNaN(monto)) return alert("Complete todos los campos principales (recuerde seleccionar el tercero).");
 
         try {
-            await addDoc(collection(db, 'artifacts', appId, 'users', userId, modulo), { createdAt: Date.now(), fecha: obtenerFechaCorta(), tercero, concepto, tipo, formaPago, total: monto });
-            document.getElementById(`tercero-${modulo}`).value = ""; document.getElementById(`concepto-${modulo}`).value = ""; document.getElementById(`monto-${modulo}`).value = "";
+            await addDoc(collection(db, 'artifacts', appId, 'users', userId, modulo), { 
+                createdAt: Date.now(), fecha: obtenerFechaCorta(), numeroDoc, tercero, concepto, tipo, formaPago, total: monto 
+            });
+            document.getElementById(`tercero-${modulo}`).value = ""; 
+            document.getElementById(`concepto-${modulo}`).value = ""; 
+            document.getElementById(`monto-${modulo}`).value = "";
+            document.getElementById(`doc-num-${modulo}`).value = "";
         } catch (error) { console.error("Error guardando:", error); }
     }
 
     window.borrarRegistro = async function(modulo, docId) {
-        if(!confirm("¿Eliminar este registro permanentemente de la nube? Esto afectará el inventario.")) return;
+        if(!confirm("¿Eliminar este registro permanentemente de la nube?")) return;
         try { await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, modulo, docId));
         } catch (error) { alert("Error eliminando."); }
     }
@@ -1396,12 +1928,19 @@
         return onSnapshot(ref, (snapshot) => {
             let registros = [];
             snapshot.forEach(doc => { registros.push({ id: doc.id, ...doc.data() }); });
-            registros.sort((a, b) => b.createdAt - a.createdAt);
+            
+            // Si es terceros, lo ordenamos alfabéticamente
+            if (modulo === 'terceros') {
+                registros.sort((a, b) => a.nombre.localeCompare(b.nombre));
+            } else {
+                registros.sort((a, b) => b.createdAt - a.createdAt);
+            }
             
             window.adminRecordsCache[modulo] = registros;
             
-            // Renderizar inventario siempre que cambien compras o ventas
-            if(modulo === 'ventas' || modulo === 'compras') {
+            // Marcar módulo como cargado
+            if (modulo === 'ventas' || modulo === 'compras') {
+                window.modulosCargados[modulo] = true;
                 renderizarInventario();
             }
             
@@ -1409,24 +1948,34 @@
             if(!tbody) return;
             tbody.innerHTML = "";
 
+            if (registros.length === 0) {
+                 tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:gray;">No hay registros disponibles.</td></tr>`;
+                 return;
+            }
+
             registros.forEach(r => {
                 let tr = document.createElement('tr');
-                if(modulo === 'ingresos') {
+                if (modulo === 'terceros') {
+                    tr.innerHTML = `<td><strong>${r.nombre}</strong></td>
+                        <td>${r.documento || '-'}</td>
+                        <td>${r.telefono || '-'}</td>
+                        <td class="text-right"><button class="btn-table-action" style="color:red;" onclick="borrarRegistro('${modulo}', '${r.id}')" title="Borrar">✖</button></td>`;
+                } else if(modulo === 'ingresos') {
                     let pagoLabel = r.formaPago || r.tipo || 'N/A';
-                    tr.innerHTML = `<td>${r.fecha}</td><td><strong>${r.tercero}</strong></td><td>${r.concepto}</td>
+                    tr.innerHTML = `<td>${r.fecha}</td><td><b>${r.numeroDoc || '-'}</b></td><td><strong>${r.tercero}</strong></td><td>${r.concepto}</td>
                         <td><span style="background:#e3f2fd; color:#1565c0; padding:3px 8px; border-radius:5px; font-size:0.8rem; font-weight:bold;">${pagoLabel}</span></td>
                         <td class="text-right" style="color: green; font-weight:bold;">$${r.total.toLocaleString()}</td>
                         <td class="text-right"><button class="btn-table-action" style="color:red;" onclick="borrarRegistro('${modulo}', '${r.id}')" title="Borrar">✖</button></td>`;
                 } else if(modulo === 'egresos') {
                     let pagoLabel = r.formaPago || 'N/A';
-                    tr.innerHTML = `<td>${r.fecha}</td><td><strong>${r.tercero}</strong></td><td>${r.concepto}</td>
+                    tr.innerHTML = `<td>${r.fecha}</td><td><b>${r.numeroDoc || '-'}</b></td><td><strong>${r.tercero}</strong></td><td>${r.concepto}</td>
                         <td><span style="background:#eee; padding:3px 8px; border-radius:5px; font-size:0.8rem;">${r.tipo || '-'}</span></td>
                         <td><span style="background:#e3f2fd; color:#1565c0; padding:3px 8px; border-radius:5px; font-size:0.8rem; font-weight:bold;">${pagoLabel}</span></td>
                         <td class="text-right" style="color: red; font-weight:bold;">$${r.total.toLocaleString()}</td>
                         <td class="text-right"><button class="btn-table-action" style="color:red;" onclick="borrarRegistro('${modulo}', '${r.id}')" title="Borrar">✖</button></td>`;
                 } else {
                     let cantItems = r.items ? r.items.length : 0;
-                    tr.innerHTML = `<td>${r.fecha}</td><td><strong>${r.persona}</strong></td><td>${cantItems} ítems</td>
+                    tr.innerHTML = `<td>${r.fecha}</td><td><b>${r.numeroDoc || '-'}</b></td><td><strong>${r.persona}</strong></td><td>${cantItems} ítems</td>
                         <td class="text-right">$${(r.impuestoValor || 0).toLocaleString(undefined, {maximumFractionDigits:2})}</td>
                         <td class="text-right" style="font-weight:bold; color:var(--accent);">$${(r.totalFinal || r.total || 0).toLocaleString(undefined, {maximumFractionDigits:2})}</td>
                         <td class="text-right">
