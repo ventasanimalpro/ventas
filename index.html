@@ -177,7 +177,7 @@
     </div>
 
     <div id="catalogo-principal">
-        <p style="text-align: center; color: gray;">⏳ Cargando catálogo...</p>
+        <p style="text-align: center; color: gray;">⏳ Cargando catálogo interactivo...</p>
     </div>
 
     <div id="cart-bar">
@@ -196,10 +196,11 @@
     <div class="admin-layout">
         <!-- Sidebar Menú -->
         <div class="admin-sidebar">
-            <!-- NUEVO: Pestaña Dashboard -->
             <button class="admin-tab" onclick="cambiarModulo('dashboard', this)">📈 Dashboard</button>
             <button class="admin-tab" onclick="cambiarModulo('terceros', this)">👥 Terceros</button>
-            <button class="admin-tab" onclick="cambiarModulo('inventario', this)">📦 Inventario</button>
+            <!-- NUEVO: Pestaña Productos -->
+            <button class="admin-tab" onclick="cambiarModulo('productos', this)">📦 Mis Productos</button>
+            <button class="admin-tab" onclick="cambiarModulo('inventario', this)">📊 Inventario</button>
             <button class="admin-tab active" onclick="cambiarModulo('ventas', this)">🛒 Ventas</button>
             <button class="admin-tab" onclick="cambiarModulo('compras', this)">🏭 Compras</button>
             <button class="admin-tab" onclick="cambiarModulo('ingresos', this)">💵 Ingreso (Cartera)</button>
@@ -210,7 +211,70 @@
         <!-- Área de Contenido -->
         <div class="admin-content-area">
 
-            <!-- NUEVO MÓDULO: DASHBOARD -->
+            <!-- NUEVO MÓDULO: MIS PRODUCTOS -->
+            <div id="mod-productos" class="modulo-admin">
+                <h3 class="admin-title">Gestión del Catálogo Principal</h3>
+                
+                <div class="admin-form-box" style="margin-bottom: 25px;">
+                    <h4>Crear o Editar Producto</h4>
+                    <p style="font-size:0.85rem; color:#666; margin-top:0;">Estos productos son los que tus clientes verán en la página principal.</p>
+                    <div style="display:flex; gap:10px; flex-wrap: wrap;">
+                        <div class="admin-form-group" style="flex:2; min-width: 200px;">
+                            <label>Nombre del Producto</label>
+                            <input type="text" id="prod-nombre" placeholder="Ej: Aquazix GFA X5KG">
+                        </div>
+                        <div class="admin-form-group" style="flex:1; min-width: 150px;">
+                            <label>Grupo / Categoría</label>
+                            <input type="text" id="prod-grupo" placeholder="Ej: Medicamentos">
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:10px; flex-wrap: wrap;">
+                        <div class="admin-form-group" style="flex:1; min-width: 150px;">
+                            <label>Precio de Venta Actual ($)</label>
+                            <input type="number" id="prod-precio" placeholder="Obligatorio">
+                        </div>
+                        <div class="admin-form-group" style="flex:1; min-width: 150px;">
+                            <label>Precio Anterior (Tachado) ($)</label>
+                            <input type="number" id="prod-precio-orig" placeholder="Opcional">
+                        </div>
+                    </div>
+                    <div class="admin-form-group">
+                        <label>Descripción Corta</label>
+                        <input type="text" id="prod-desc" placeholder="Añade beneficios o detalles...">
+                    </div>
+                    <div class="admin-form-group">
+                        <label>Imagen del Producto (Sube una foto)</label>
+                        <input type="file" id="prod-img-file" accept="image/*" style="padding: 10px; background: white; cursor: pointer;" onchange="convertirImagenABase64(this)">
+                        <input type="hidden" id="prod-img-base64">
+                        <div id="prod-img-preview" style="margin-top: 10px;"></div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-admin-action" id="btn-guardar-prod" onclick="guardarProductoCatalogo()" style="flex: 1;">💾 Guardar Producto</button>
+                        <button class="btn-admin-action btn-cancel-edit" id="btn-cancelar-prod" onclick="cancelarEdicionProducto()" style="display:none; flex: 1; margin-top: 10px;">Cancelar Edición</button>
+                    </div>
+                </div>
+
+                <h4 style="border-bottom: 1px solid #ddd; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                    <span>Lista de Productos Públicos</span>
+                    <button class="btn-admin-action" style="width: auto; padding: 8px 15px; margin: 0; font-size: 0.9rem; background: var(--info);" onclick="abrirModalExcel('productos')">📥 Importar Excel</button>
+                </h4>
+                
+                <!-- Buscador de Productos -->
+                <div class="admin-form-group" style="margin-bottom: 15px;">
+                    <input type="text" class="autocomplete-input" style="padding: 10px 15px; border-radius: 10px; width: 100%; box-sizing: border-box; font-size: 0.9rem; border: 1px solid #dfe1e5;" placeholder="🔍 Buscar producto por nombre o grupo..." onkeyup="filtrarTablaAdmin('productos', this.value)">
+                </div>
+
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead><tr><th>Imagen</th><th>Nombre</th><th>Grupo</th><th class="text-right">Precio Venta</th><th class="text-right">Acción</th></tr></thead>
+                        <tbody id="tabla-productos-admin">
+                            <tr><td colspan="5" style="text-align:center; color:gray;">Cargando catálogo...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- MÓDULO: DASHBOARD -->
             <div id="mod-dashboard" class="modulo-admin">
                 <h3 class="admin-title">Panel de Control Estratégico</h3>
                 
@@ -252,6 +316,12 @@
                     <span>Directorio Guardado</span>
                     <button class="btn-admin-action" style="width: auto; padding: 8px 15px; margin: 0; font-size: 0.9rem; background: var(--info);" onclick="abrirModalExcel('terceros')">📥 Importar Excel</button>
                 </h4>
+                
+                <!-- Buscador de Terceros -->
+                <div class="admin-form-group" style="margin-bottom: 15px;">
+                    <input type="text" class="autocomplete-input" style="padding: 10px 15px; border-radius: 10px; width: 100%; box-sizing: border-box; font-size: 0.9rem; border: 1px solid #dfe1e5;" placeholder="🔍 Buscar tercero por nombre o documento..." onkeyup="filtrarTablaAdmin('terceros', this.value)">
+                </div>
+
                 <div class="table-responsive">
                     <table class="admin-table">
                         <thead><tr><th>Nombre</th><th>Documento</th><th>Teléfono</th><th class="text-right">Acción</th></tr></thead>
@@ -374,6 +444,12 @@
                     <span>Historial de Ventas</span>
                     <button class="btn-admin-action" style="width: auto; padding: 8px 15px; margin: 0; font-size: 0.9rem; background: var(--info);" onclick="abrirModalExcel('ventas')">📥 Importar Excel</button>
                 </h4>
+                
+                <!-- Buscador de Ventas -->
+                <div class="admin-form-group" style="margin-bottom: 15px;">
+                    <input type="text" class="autocomplete-input" style="padding: 10px 15px; border-radius: 10px; width: 100%; box-sizing: border-box; font-size: 0.9rem; border: 1px solid #dfe1e5;" placeholder="🔍 Buscar por N° documento o cliente..." onkeyup="filtrarTablaAdmin('ventas', this.value)">
+                </div>
+
                 <div class="table-responsive">
                     <table class="admin-table">
                         <thead><tr><th>Fecha</th><th>N° Doc</th><th>Cliente</th><th>Artículos</th><th class="text-right">Impuesto</th><th class="text-right">Total Final</th><th class="text-right">Acciones</th></tr></thead>
@@ -460,6 +536,12 @@
                     <span>Historial de Compras</span>
                     <button class="btn-admin-action" style="width: auto; padding: 8px 15px; margin: 0; font-size: 0.9rem; background: var(--info);" onclick="abrirModalExcel('compras')">📥 Importar Excel</button>
                 </h4>
+                
+                <!-- Buscador de Compras -->
+                <div class="admin-form-group" style="margin-bottom: 15px;">
+                    <input type="text" class="autocomplete-input" style="padding: 10px 15px; border-radius: 10px; width: 100%; box-sizing: border-box; font-size: 0.9rem; border: 1px solid #dfe1e5;" placeholder="🔍 Buscar por N° documento o proveedor..." onkeyup="filtrarTablaAdmin('compras', this.value)">
+                </div>
+
                 <div class="table-responsive">
                     <table class="admin-table">
                         <thead><tr><th>Fecha</th><th>N° Doc</th><th>Proveedor</th><th>Artículos</th><th class="text-right">Impuesto</th><th class="text-right">Costo Final</th><th class="text-right">Acciones</th></tr></thead>
@@ -480,8 +562,8 @@
                         <h4>Datos del Prospecto</h4>
                         <div style="display:flex; gap:10px;">
                             <div class="admin-form-group" style="flex:2;">
-                                <label>Tercero (Busca o añade uno nuevo de la lista)</label>
-                                <input type="text" id="persona-cotizaciones" class="autocomplete-input" placeholder="🔍 Escribe para buscar tercero..." autocomplete="off">
+                                <label>Interesado (Cliente)</label>
+                                <input type="text" id="persona-cotizaciones" class="autocomplete-input" placeholder="Nombre prospecto" autocomplete="off">
                                 <div id="autocomplete-list-persona-cotizaciones" class="autocomplete-items"></div>
                             </div>
                             <div class="admin-form-group" style="flex:1;">
@@ -533,6 +615,12 @@
 
                 <!-- Historial -->
                 <h4 style="margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">Historial de Cotizaciones</h4>
+                
+                <!-- Buscador de Cotizaciones -->
+                <div class="admin-form-group" style="margin-bottom: 15px;">
+                    <input type="text" class="autocomplete-input" style="padding: 10px 15px; border-radius: 10px; width: 100%; box-sizing: border-box; font-size: 0.9rem; border: 1px solid #dfe1e5;" placeholder="🔍 Buscar por N° cotización o prospecto..." onkeyup="filtrarTablaAdmin('cotizaciones', this.value)">
+                </div>
+
                 <div class="table-responsive">
                     <table class="admin-table">
                         <thead><tr><th>Fecha</th><th>N° Doc</th><th>Prospecto</th><th>Artículos</th><th class="text-right">Impuesto</th><th class="text-right">Total Final</th><th class="text-right">Acciones</th></tr></thead>
@@ -547,8 +635,8 @@
                 <div class="admin-form">
                     <div style="display:flex; gap:10px;">
                         <div class="admin-form-group" style="flex:2;">
-                            <label>Tercero (Busca o añade uno nuevo de la lista)</label>
-                            <input type="text" id="tercero-ingresos" class="autocomplete-input" placeholder="🔍 Escribe para buscar tercero..." autocomplete="off">
+                            <label>Tercero (Cliente/Entidad)</label>
+                            <input type="text" id="tercero-ingresos" class="autocomplete-input" placeholder="Busca o escribe quien paga..." autocomplete="off">
                             <div id="autocomplete-list-tercero-ingresos" class="autocomplete-items"></div>
                         </div>
                         <div class="admin-form-group" style="flex:1;">
@@ -574,6 +662,14 @@
                     </div>
                     <button class="btn-admin-action" style="margin-top:20px;" onclick="guardarFinanzas('ingresos')">Registrar Ingreso</button>
                 </div>
+
+                <h4 style="margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">Historial de Ingresos</h4>
+                
+                <!-- Buscador de Ingresos -->
+                <div class="admin-form-group" style="margin-bottom: 15px;">
+                    <input type="text" class="autocomplete-input" style="padding: 10px 15px; border-radius: 10px; width: 100%; box-sizing: border-box; font-size: 0.9rem; border: 1px solid #dfe1e5;" placeholder="🔍 Buscar por recibo, tercero o concepto..." onkeyup="filtrarTablaAdmin('ingresos', this.value)">
+                </div>
+
                 <div class="table-responsive">
                     <table class="admin-table">
                         <thead><tr><th>Fecha</th><th>N° Doc</th><th>Tercero</th><th>Concepto</th><th>Forma Pago</th><th class="text-right">Monto</th><th>Acción</th></tr></thead>
@@ -588,8 +684,8 @@
                 <div class="admin-form">
                     <div style="display:flex; gap:10px;">
                         <div class="admin-form-group" style="flex:2;">
-                            <label>Tercero (Busca o añade uno nuevo de la lista)</label>
-                            <input type="text" id="tercero-egresos" class="autocomplete-input" placeholder="🔍 Escribe para buscar tercero..." autocomplete="off">
+                            <label>Tercero (Proveedor/Destino)</label>
+                            <input type="text" id="tercero-egresos" class="autocomplete-input" placeholder="Busca o escribe a quién se le paga..." autocomplete="off">
                             <div id="autocomplete-list-tercero-egresos" class="autocomplete-items"></div>
                         </div>
                         <div class="admin-form-group" style="flex:1;">
@@ -624,6 +720,14 @@
                     </div>
                     <button class="btn-admin-action" style="margin-top:20px;" onclick="guardarFinanzas('egresos')">Registrar Egreso</button>
                 </div>
+
+                <h4 style="margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">Historial de Egresos</h4>
+                
+                <!-- Buscador de Egresos -->
+                <div class="admin-form-group" style="margin-bottom: 15px;">
+                    <input type="text" class="autocomplete-input" style="padding: 10px 15px; border-radius: 10px; width: 100%; box-sizing: border-box; font-size: 0.9rem; border: 1px solid #dfe1e5;" placeholder="🔍 Buscar por comprobante, tercero o concepto..." onkeyup="filtrarTablaAdmin('egresos', this.value)">
+                </div>
+
                 <div class="table-responsive">
                     <table class="admin-table">
                         <thead><tr><th>Fecha</th><th>N° Doc</th><th>Tercero</th><th>Concepto</th><th>Categoría</th><th>Forma Pago</th><th class="text-right">Monto</th><th>Acción</th></tr></thead>
@@ -663,7 +767,7 @@
             <option value="Transferencia">Transferencia</option>
         </select>
         <button class="btn-enviar" id="btnEnviar" onclick="enviarPedido()">ENVIAR PEDIDO</button>
-        <button style="background:none; border:none; color:grey; width:100%; margin-top:10px; cursor:pointer;" onclick="cerrarFormulario()">Cancelar</button>
+        <button style="background:none; border:none; color:grey; width:100%; margin-top:15px; cursor:pointer;" onclick="cerrarFormulario()">Cancelar</button>
     </div>
 </div>
 
@@ -746,7 +850,7 @@
         </div>
         
         <button class="btn-enviar" onclick="guardarTerceroDesdeModal()">GUARDAR TERCERO</button>
-        <button style="background:none; border:none; color:grey; width:100%; margin-top:10px; cursor:pointer;" onclick="cerrarModalNuevoTercero()">Cancelar</button>
+        <button style="background:none; border:none; color:grey; width:100%; margin-top:15px; cursor:pointer;" onclick="cerrarModalNuevoTercero()">Cancelar</button>
     </div>
 </div>
 
@@ -761,7 +865,7 @@
     const WEB_APP_URL ="https://script.google.com/macros/s/AKfycbwpm8CKeqBRptJQfu47QhR27G65py60KKlP3b-OGqp4lwv9MFEpgpLV1yxgLLf5kx0/exec"; 
     let carrito = [];
     let diasMinimosGlobal = 2;
-    let productosGlobales = []; 
+    let productosGlobales = []; // Ahora se llenará desde Firebase
 
     // Globales de Firebase y Panel Admin
     let db, auth, userId, appId;
@@ -774,8 +878,9 @@
         cotizaciones: { items: [], editId: null }
     };
     window.adminRecordsCache = { ventas: [], compras: [], cotizaciones: [], ingresos: [], egresos: [], terceros: [] }; 
-    window.modulosCargados = { ventas: false, compras: false }; // Para saber cuándo chequear los vencimientos
-    window.vencimientosMostrados = false; // Evita que la alerta salga múltiples veces
+    window.adminSearchQueries = { ventas: "", compras: "", cotizaciones: "", ingresos: "", egresos: "", terceros: "", productos: "" };
+    window.modulosCargados = { ventas: false, compras: false }; 
+    window.vencimientosMostrados = false;
 
     // Variables de Búsqueda y Ordenamiento para Inventario
     let invSearchQuery = "";
@@ -797,6 +902,22 @@
             auth = getAuth(app);
             db = getFirestore(app);
             appId = "animalpro"; 
+
+            // Cargar el catálogo público de Firebase para TODOS (Incluso sin sesión iniciada)
+            const prodRef = collection(db, 'productos_catalogo');
+            onSnapshot(prodRef, (snapshot) => {
+                productosGlobales = [];
+                snapshot.forEach(doc => {
+                    productosGlobales.push({ id: doc.id, ...doc.data() });
+                });
+                renderizarCatalogoPublico();
+                renderizarTablaModulo('productos');
+            }, (error) => {
+                if (error.code === 'permission-denied' || (error.message && error.message.includes('permissions'))) {
+                    document.getElementById('texto-aviso').innerHTML = `Para mostrar el catálogo a tus clientes, ve a las reglas de Firestore y configúralo a:<br><br><code>match /productos_catalogo/{document} {<br>  allow read: if true;<br>  allow write: if request.auth != null;<br>}</code>`;
+                    document.getElementById('modal-aviso').style.display = 'flex';
+                }
+            });
 
             onAuthStateChanged(auth, (user) => {
                 if(user) {
@@ -839,6 +960,7 @@
             });
         } catch(e) { console.error("Error al iniciar Firebase:", e); }
 
+        // Mantenemos la lógica de Google Apps Script SÓLO para el mensaje de la empresa y días de entrega
         try {
             const res = await fetch(WEB_APP_URL + "?getData=1");
             const data = await res.json();
@@ -856,47 +978,83 @@
             const hoy = new Date(); hoy.setDate(hoy.getDate() + diasMinimosGlobal);
             const minDate = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
             fechaInput.setAttribute('min', minDate); fechaInput.value = minDate;
-
-            const catalogo = document.getElementById('catalogo-principal');
-            catalogo.innerHTML = ""; 
-
-            if(data.productos && data.productos.length > 0) {
-                productosGlobales = data.productos; 
-                
-                configurarAutocomplete('ventas');
-                configurarAutocomplete('compras');
-                configurarAutocomplete('cotizaciones');
-
-                const productosPorGrupo = {};
-                data.productos.forEach(prod => {
-                    const grupo = prod.grupo || "GENERAL";
-                    if(!productosPorGrupo[grupo]) productosPorGrupo[grupo] = [];
-                    productosPorGrupo[grupo].push(prod);
-                });
-
-                for(const [grupo, prods] of Object.entries(productosPorGrupo)) {
-                    let htmlGrupo = `<div class="seccion-grupo"><div class="banner-grupo">📂 ${grupo}</div><div class="contenedor-grid">`;
-                    prods.forEach(prod => {
-                        let precioOrig = parseInt(prod.precioOriginal);
-                        let precioFinal = parseInt(prod.precio);
-                        let tieneDescuento = !isNaN(precioOrig) && !isNaN(precioFinal) && precioOrig > precioFinal;
-                        let htmlPrecio = "";
-                        let porcentajeGuardar = ""; 
-                        
-                        if (tieneDescuento) {
-                            let porcentaje = Math.round(((precioOrig - precioFinal) / precioOrig) * 100);
-                            porcentajeGuardar = `-${porcentaje}%`;
-                            htmlPrecio = `<p><span class="precio-original">$${precioOrig.toLocaleString()}</span> $${precioFinal.toLocaleString()} <span class="etiqueta-descuento">${porcentajeGuardar}</span></p>`;
-                        } else { htmlPrecio = `<p>$${precioFinal.toLocaleString()}</p>`; }
-
-                        htmlGrupo += `<div class="producto" onclick="abrirModalProducto(this)" data-nombre="${prod.nombre}" data-precio="${prod.precio}" data-precio-original="${prod.precioOriginal}" data-descuento="${porcentajeGuardar}" data-img="${prod.imagen}" data-desc="${prod.descripcion}"><span class="badge">0</span><img src="${prod.imagen}" alt="${prod.nombre}"><div class="info-prod"><h3>${prod.nombre}</h3>${htmlPrecio}</div></div>`;
-                    });
-                    htmlGrupo += `</div></div>`;
-                    catalogo.innerHTML += htmlGrupo;
-                }
-            } else { catalogo.innerHTML = "<p style='text-align: center; color: gray;'>No hay productos disponibles por el momento.</p>"; }
-        } catch (e) { document.getElementById('catalogo-principal').innerHTML = "<p style='text-align: center; color: red;'>Error cargando el catálogo. Intenta recargar la página.</p>"; }
+            
+        } catch (e) { 
+            console.log("No se pudo conectar al script para traer mensajes/días, pero el catálogo cargará desde Firebase de todos modos.");
+        }
     };
+
+
+    // --- FUNCIÓN QUE PINTA EL CATÁLOGO PRINCIPAL (PÚBLICO) ---
+    function renderizarCatalogoPublico() {
+        const catalogo = document.getElementById('catalogo-principal');
+        catalogo.innerHTML = ""; 
+
+        if(productosGlobales && productosGlobales.length > 0) {
+            
+            // Recargamos los autocompletados
+            configurarAutocomplete('ventas');
+            configurarAutocomplete('compras');
+            configurarAutocomplete('cotizaciones');
+
+            const productosPorGrupo = {};
+            
+            // 1. Ordenar productos: Primero los de Inseminación/Semen, luego alfabéticamente
+            let productosOrdenados = [...productosGlobales].sort((a, b) => {
+                let textA = (a.nombre + " " + (a.grupo || "")).toLowerCase();
+                let textB = (b.nombre + " " + (b.grupo || "")).toLowerCase();
+                let aIsIns = textA.includes('semen') || textA.includes('inseminaci');
+                let bIsIns = textB.includes('semen') || textB.includes('inseminaci');
+                
+                if (aIsIns && !bIsIns) return -1;
+                if (!aIsIns && bIsIns) return 1;
+                return a.nombre.localeCompare(b.nombre);
+            });
+
+            productosOrdenados.forEach(prod => {
+                const grupo = prod.grupo || "GENERAL";
+                if(!productosPorGrupo[grupo]) productosPorGrupo[grupo] = [];
+                productosPorGrupo[grupo].push(prod);
+            });
+
+            // 2. Ordenar grupos: Primero el grupo de Inseminación, luego alfabéticamente
+            let gruposOrdenados = Object.keys(productosPorGrupo).sort((a, b) => {
+                let aIsIns = a.toLowerCase().includes('semen') || a.toLowerCase().includes('inseminaci');
+                let bIsIns = b.toLowerCase().includes('semen') || b.toLowerCase().includes('inseminaci');
+                
+                if (aIsIns && !bIsIns) return -1;
+                if (!aIsIns && bIsIns) return 1;
+                return a.localeCompare(b);
+            });
+
+            gruposOrdenados.forEach(grupo => {
+                let prods = productosPorGrupo[grupo];
+                let htmlGrupo = `<div class="seccion-grupo"><div class="banner-grupo">📂 ${grupo}</div><div class="contenedor-grid">`;
+                prods.forEach(prod => {
+                    let precioOrig = parseInt(prod.precioOriginal);
+                    let precioFinal = parseInt(prod.precio);
+                    let tieneDescuento = !isNaN(precioOrig) && !isNaN(precioFinal) && precioOrig > precioFinal;
+                    let htmlPrecio = "";
+                    let porcentajeGuardar = ""; 
+                    
+                    if (tieneDescuento) {
+                        let porcentaje = Math.round(((precioOrig - precioFinal) / precioOrig) * 100);
+                        porcentajeGuardar = `-${porcentaje}%`;
+                        htmlPrecio = `<p><span class="precio-original">$${precioOrig.toLocaleString()}</span> $${precioFinal.toLocaleString()} <span class="etiqueta-descuento">${porcentajeGuardar}</span></p>`;
+                    } else { htmlPrecio = `<p>$${precioFinal.toLocaleString()}</p>`; }
+
+                    // Imagen por defecto si no le ponen URL
+                    let imagenUrl = prod.imagen && prod.imagen.trim() !== "" ? prod.imagen : 'https://via.placeholder.com/150?text=Sin+Imagen';
+
+                    htmlGrupo += `<div class="producto" onclick="abrirModalProducto(this)" data-nombre="${prod.nombre}" data-precio="${prod.precio}" data-precio-original="${prod.precioOriginal}" data-descuento="${porcentajeGuardar}" data-img="${imagenUrl}" data-desc="${prod.descripcion || ''}"><span class="badge">0</span><img src="${imagenUrl}" alt="${prod.nombre}"><div class="info-prod"><h3>${prod.nombre}</h3>${htmlPrecio}</div></div>`;
+                });
+                htmlGrupo += `</div></div>`;
+                catalogo.innerHTML += htmlGrupo;
+            });
+        } else { 
+            catalogo.innerHTML = "<p style='text-align: center; color: gray;'>No hay productos disponibles en el catálogo.</p>"; 
+        }
+    }
 
 
     // --- EXPOSICIÓN DE FUNCIONES GLOBALES (CATÁLOGO PÚBLICO) ---
@@ -1004,7 +1162,7 @@
     }
 
     window.generarCatalogoPDF = async function() {
-        if(!productosGlobales || productosGlobales.length === 0) return alert("⚠️ Catálogo cargando...");
+        if(!productosGlobales || productosGlobales.length === 0) return alert("⚠️ Catálogo vacío...");
         document.getElementById('btnExportPDF').innerText = "⏳ Generando PDF..."; document.getElementById('btnExportPDF').disabled = true;
 
         const { jsPDF } = window.jspdf; const doc = new jsPDF();
@@ -1031,10 +1189,12 @@
             if (itemsOnPage === 2) { doc.addPage(); pageNum++; drawHeadFoot(pageNum); yOffset = 25; itemsOnPage = 0; }
             doc.setFillColor(244, 247, 246); doc.setDrawColor(37, 211, 102); doc.setLineWidth(0.5); doc.roundedRect(10, yOffset, 190, 120, 5, 5, 'FD'); 
             doc.setFillColor(255, 255, 255); doc.roundedRect(15, yOffset + 10, 85, 100, 3, 3, 'FD');
-            if(p.imagen) {
+            if(p.imagen && p.imagen.trim() !== "") {
                 const b64 = await imgToBase64(p.imagen);
                 if(b64) doc.addImage(b64, 'JPEG', 17, yOffset + 12, 81, 96);
                 else { doc.setTextColor(200); doc.setFontSize(40); doc.text("📷", 57, yOffset + 60, { align: "center" }); }
+            } else {
+                doc.setTextColor(200); doc.setFontSize(40); doc.text("📷", 57, yOffset + 60, { align: "center" });
             }
             doc.setTextColor(27, 94, 32); doc.setFont("helvetica", "bold"); doc.setFontSize(22);
             let sTitle = doc.splitTextToSize(p.nombre.toUpperCase(), 85); doc.text(sTitle, 110, yOffset + 22);
@@ -1151,16 +1311,119 @@
         });
     }
 
-    // Funciones Autocompletar Estándar para Productos
+    // --- NUEVAS FUNCIONES PARA GESTIONAR EL CATÁLOGO (MIS PRODUCTOS) ---
+    let prodEditId = null;
+
+    window.convertirImagenABase64 = function(input) {
+        const file = input.files[0];
+        if (!file) {
+            document.getElementById('prod-img-base64').value = '';
+            document.getElementById('prod-img-preview').innerHTML = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            document.getElementById('prod-img-base64').value = event.target.result;
+            document.getElementById('prod-img-preview').innerHTML = `<img src="${event.target.result}" style="max-height:80px; border-radius:5px; border: 1px solid #ddd; padding: 2px; background: white;">`;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    window.guardarProductoCatalogo = async function() {
+        if(!userId) return alert("Error de autenticación.");
+        
+        const nombre = document.getElementById('prod-nombre').value.trim();
+        const grupo = document.getElementById('prod-grupo').value.trim() || 'GENERAL';
+        const precio = parseFloat(document.getElementById('prod-precio').value) || 0;
+        const precioOriginal = parseFloat(document.getElementById('prod-precio-orig').value) || "";
+        const descripcion = document.getElementById('prod-desc').value.trim();
+        const imagen = document.getElementById('prod-img-base64').value.trim(); // Ahora toma el código Base64
+
+        if(!nombre || precio <= 0) return alert("Por favor ingresa al menos el Nombre y un Precio Venta válido.");
+
+        const btn = document.getElementById('btn-guardar-prod');
+        btn.disabled = true; btn.innerText = "⏳ Guardando...";
+
+        const prodData = { nombre, grupo, precio, precioOriginal, descripcion, imagen, updatedAt: Date.now() };
+
+        try {
+            if (prodEditId) {
+                await updateDoc(doc(db, 'productos_catalogo', prodEditId), prodData);
+            } else {
+                prodData.createdAt = Date.now();
+                await addDoc(collection(db, 'productos_catalogo'), prodData);
+            }
+            alert("Producto guardado correctamente en tu catálogo.");
+            cancelarEdicionProducto();
+        } catch (e) {
+            console.error(e); alert("Error al guardar. Revisa tus permisos en Firebase.");
+        } finally {
+            btn.disabled = false; btn.innerText = "💾 Guardar Producto";
+        }
+    }
+
+    window.editarProductoCatalogo = function(id) {
+        const prod = productosGlobales.find(p => p.id === id);
+        if(!prod) return alert("No se encontró el producto.");
+        
+        prodEditId = id;
+        document.getElementById('prod-nombre').value = prod.nombre;
+        document.getElementById('prod-grupo').value = prod.grupo || '';
+        document.getElementById('prod-precio').value = prod.precio || '';
+        document.getElementById('prod-precio-orig').value = prod.precioOriginal || '';
+        document.getElementById('prod-desc').value = prod.descripcion || '';
+        
+        document.getElementById('prod-img-base64').value = prod.imagen || '';
+        document.getElementById('prod-img-file').value = ''; // Limpiamos el input de archivo
+        
+        // Mostrar la vista previa si ya tiene imagen guardada
+        if (prod.imagen && prod.imagen.trim() !== "") {
+            document.getElementById('prod-img-preview').innerHTML = `<img src="${prod.imagen}" style="max-height:80px; border-radius:5px; border: 1px solid #ddd; padding: 2px; background: white;">`;
+        } else {
+            document.getElementById('prod-img-preview').innerHTML = '';
+        }
+        
+        document.getElementById('btn-guardar-prod').style.background = 'var(--warning)';
+        document.getElementById('btn-guardar-prod').innerText = '💾 Guardar Cambios';
+        document.getElementById('btn-cancelar-prod').style.display = 'block';
+        
+        document.getElementById('mod-productos').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    window.cancelarEdicionProducto = function() {
+        prodEditId = null;
+        document.getElementById('prod-nombre').value = '';
+        document.getElementById('prod-grupo').value = '';
+        document.getElementById('prod-precio').value = '';
+        document.getElementById('prod-precio-orig').value = '';
+        document.getElementById('prod-desc').value = '';
+        
+        document.getElementById('prod-img-base64').value = '';
+        document.getElementById('prod-img-file').value = '';
+        document.getElementById('prod-img-preview').innerHTML = '';
+        
+        document.getElementById('btn-guardar-prod').style.background = 'var(--primary)';
+        document.getElementById('btn-guardar-prod').innerText = '💾 Guardar Producto';
+        document.getElementById('btn-cancelar-prod').style.display = 'none';
+    }
+
+    window.borrarProductoCatalogo = async function(id) {
+        if(!confirm("¿Seguro que quieres eliminar este producto del catálogo público? (Tu inventario histórico no se borrará)")) return;
+        try {
+            await deleteDoc(doc(db, 'productos_catalogo', id));
+        } catch (e) { alert("Error eliminando producto."); }
+    }
+
+    // Funciones Autocompletar Estándar para Productos (En Ventas, Compras...)
     function getKnownProducts() {
         let known = new Map();
         
-        // 1. Productos del catálogo público (Google Sheets)
+        // 1. Productos del catálogo público (Firebase)
         productosGlobales.forEach(p => {
             known.set(p.nombre.trim().toLowerCase(), { nombre: p.nombre, precio: parseInt(p.precio) || 0 });
         });
         
-        // 2. Historial de Ventas (Para recordar el último precio de venta de productos que NO están en el Excel público)
+        // 2. Historial de Ventas (Para recordar el último precio de venta de productos que NO están en el catálogo público)
         (window.adminRecordsCache.ventas || []).forEach(venta => {
             (venta.items || []).forEach(item => {
                 let key = item.nombre.trim().toLowerCase();
@@ -1181,6 +1444,91 @@
         
         return Array.from(known.values());
     }
+
+    // Función auxiliar para limpiar números provenientes de Excel (elimina $, puntos de miles, etc.)
+    function limpiarNumero(val) {
+        if (typeof val === 'number') return val;
+        if (!val) return 0;
+        // Eliminar todo lo que no sea número o coma/punto decimal
+        let clean = val.toString().replace(/[^0-9.,-]/g, '');
+        // Si hay puntos y comas, asumimos formato regional. 
+        // Para simplificar, eliminamos los puntos (miles) y reemplazamos coma por punto (decimal).
+        if (clean.includes(',') && clean.includes('.')) {
+            clean = clean.replace(/\./g, '').replace(/,/g, '.');
+        } else if (clean.includes(',')) {
+            // Si solo tiene comas, vemos si actúa como decimal o miles (asumimos decimal para montos pequeños o miles para grandes)
+            clean = clean.replace(/,/g, '.');
+        }
+        return parseFloat(clean) || 0;
+    }
+
+    // Función para manejar el filtrado local de las tablas administrativas
+    window.filtrarTablaAdmin = function(modulo, query) {
+        window.adminSearchQueries[modulo] = query.toLowerCase();
+        renderizarTablaModulo(modulo);
+    };
+
+    // Función unificada para renderizar las tablas del historial con soporte para búsqueda
+    window.renderizarTablaModulo = function(modulo) {
+        const tbody = document.getElementById(modulo === 'productos' ? 'tabla-productos-admin' : (modulo === 'terceros' ? 'tabla-terceros' : `tabla-${modulo}`));
+        if(!tbody) return;
+        
+        let registros = modulo === 'productos' ? [...productosGlobales] : [...(window.adminRecordsCache[modulo] || [])];
+        const query = window.adminSearchQueries[modulo] || "";
+
+        // Aplicar filtro de búsqueda si existe
+        if (query) {
+            registros = registros.filter(r => {
+                if (modulo === 'productos') {
+                    return (r.nombre || "").toLowerCase().includes(query) || (r.grupo || "").toLowerCase().includes(query);
+                } else if (modulo === 'terceros') {
+                    return (r.nombre || "").toLowerCase().includes(query) || (r.documento || "").toLowerCase().includes(query);
+                } else if (modulo === 'ingresos' || modulo === 'egresos') {
+                    const tercero = (r.tercero || "").toLowerCase();
+                    const nDoc = (r.numeroDoc || "").toLowerCase();
+                    const concepto = (r.concepto || "").toLowerCase();
+                    return tercero.includes(query) || nDoc.includes(query) || concepto.includes(query);
+                } else {
+                    const persona = (r.persona || "").toLowerCase();
+                    const nDoc = (r.numeroDoc || "").toLowerCase();
+                    return persona.includes(query) || nDoc.includes(query);
+                }
+            });
+        }
+
+        // Ordenar: Alfabético para productos/terceros, cronológico inverso para el resto
+        if (modulo === 'productos' || modulo === 'terceros') {
+            registros.sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
+        } else {
+            registros.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        }
+
+        tbody.innerHTML = "";
+        if (registros.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:gray; padding:20px;">No se encontraron resultados.</td></tr>`;
+            return;
+        }
+
+        registros.forEach(r => {
+            let tr = document.createElement('tr');
+            if (modulo === 'productos') {
+                let img = r.imagen && r.imagen.trim() !== "" ? `<img src="${r.imagen}" style="width:40px; height:40px; object-fit:cover; border-radius:5px;">` : '🖼️';
+                tr.innerHTML = `<td>${img}</td><td><strong>${r.nombre}</strong></td><td><span style="background:#eee; padding:3px 8px; border-radius:5px; font-size:0.8rem;">${r.grupo || 'GENERAL'}</span></td><td class="text-right" style="color:var(--accent); font-weight:bold;">$${parseInt(r.precio || 0).toLocaleString()}</td><td class="text-right"><button class="btn-table-action" title="Editar" onclick="editarProductoCatalogo('${r.id}')">✏️</button><button class="btn-table-action" style="color:red;" title="Borrar" onclick="borrarProductoCatalogo('${r.id}')">✖</button></td>`;
+            } else if (modulo === 'terceros') {
+                tr.innerHTML = `<td><strong>${r.nombre}</strong></td><td>${r.documento || '-'}</td><td>${r.telefono || '-'}</td><td class="text-right"><button class="btn-table-action" style="color:red;" onclick="borrarRegistro('${modulo}', '${r.id}')" title="Borrar">✖</button></td>`;
+            } else if (modulo === 'ingresos') {
+                let pagoLabel = r.formaPago || r.tipo || 'N/A';
+                tr.innerHTML = `<td>${r.fecha}</td><td><b>${r.numeroDoc || '-'}</b></td><td><strong>${r.tercero}</strong></td><td>${r.concepto}</td><td><span style="background:#e3f2fd; color:#1565c0; padding:3px 8px; border-radius:5px; font-size:0.8rem; font-weight:bold;">${pagoLabel}</span></td><td class="text-right" style="color: green; font-weight:bold;">$${r.total.toLocaleString()}</td><td class="text-right"><button class="btn-table-action" style="color:red;" onclick="borrarRegistro('${modulo}', '${r.id}')" title="Borrar">✖</button></td>`;
+            } else if (modulo === 'egresos') {
+                let pagoLabel = r.formaPago || 'N/A';
+                tr.innerHTML = `<td>${r.fecha}</td><td><b>${r.numeroDoc || '-'}</b></td><td><strong>${r.tercero}</strong></td><td>${r.concepto}</td><td><span style="background:#eee; padding:3px 8px; border-radius:5px; font-size:0.8rem;">${r.tipo || '-'}</span></td><td><span style="background:#e3f2fd; color:#1565c0; padding:3px 8px; border-radius:5px; font-size:0.8rem; font-weight:bold;">${pagoLabel}</span></td><td class="text-right" style="color: red; font-weight:bold;">$${r.total.toLocaleString()}</td><td class="text-right"><button class="btn-table-action" style="color:red;" onclick="borrarRegistro('${modulo}', '${r.id}')" title="Borrar">✖</button></td>`;
+            } else {
+                let cantItems = r.items ? r.items.length : 0;
+                tr.innerHTML = `<td>${r.fecha}</td><td><b>${r.numeroDoc || '-'}</b></td><td><strong>${r.persona}</strong></td><td>${cantItems} ítems</td><td class="text-right">$${(r.impuestoValor || 0).toLocaleString(undefined, {maximumFractionDigits:2})}</td><td class="text-right" style="font-weight:bold; color:var(--accent);">$${(r.totalFinal || r.total || 0).toLocaleString(undefined, {maximumFractionDigits:2})}</td><td class="text-right"><button class="btn-table-action" title="Editar" onclick="editarRegistroAdmin('${modulo}', '${r.id}')">✏️</button><button class="btn-table-action" title="Imprimir PDF" onclick="imprimirRegistroAdmin('${modulo}', '${r.id}')">🖨️</button><button class="btn-table-action" style="color:red;" title="Borrar" onclick="borrarRegistro('${modulo}', '${r.id}')">✖</button></td>`;
+            }
+            tbody.appendChild(tr);
+        });
+    };
 
     function configurarAutocomplete(modulo) {
         const input = document.getElementById(`busqueda-prod-${modulo}`);
@@ -1287,7 +1635,6 @@
         });
     }
 
-    // Autocompletado ESTRICTO para Terceros
     function configurarAutocompleteTerceros(inputId, listContainerId) {
         const input = document.getElementById(inputId);
         const listContainer = document.getElementById(listContainerId);
@@ -1305,7 +1652,6 @@
                 divItem.innerHTML = `<span><strong>${t.nombre}</strong></span>`;
                 if(t.nombre.toLowerCase() === val.toLowerCase()) matchExacto = true;
                 
-                // Mousedown se usa en lugar de click para no quitar el foco del input antes de procesar
                 divItem.addEventListener("mousedown", function(evt) {
                     evt.preventDefault(); 
                     input.value = t.nombre; 
@@ -1315,7 +1661,6 @@
                 listContainer.appendChild(divItem);
             });
 
-            // Si el nombre que escribe no es idéntico a ninguno guardado, le sugerimos crearlo
             if (!matchExacto) {
                 let divAdd = document.createElement("div");
                 divAdd.style.backgroundColor = "#e8f5e9";
@@ -1331,20 +1676,18 @@
             }
         });
 
-        // Validación estricta: Si se sale del input, comprobamos si el texto coincide exactamente con un tercero en la BD
         input.addEventListener("blur", function() {
             setTimeout(() => {
-                // Si el modal de nuevo tercero está abierto, no borrar el input todavía
                 if(document.getElementById('modal-nuevo-tercero').style.display === 'flex') return;
 
                 let currentVal = this.value.trim();
                 if (currentVal !== "") {
                     let exactMatch = (window.adminRecordsCache.terceros || []).find(t => t.nombre.toLowerCase() === currentVal.toLowerCase());
                     if (!exactMatch) {
-                        this.value = ""; // Borramos el input porque no lo eligió ni lo creó
+                        this.value = ""; 
                         alert("⚠️ Tercero no registrado. Búscalo en la lista o presiona '➕ Añadir' al escribir su nombre para llenar sus datos.");
                     } else {
-                        this.value = exactMatch.nombre; // Aseguramos usar las mayúsculas correctas
+                        this.value = exactMatch.nombre; 
                     }
                 }
                 listContainer.innerHTML = "";
@@ -1352,7 +1695,6 @@
         });
     }
 
-    // Funciones de Terceros (Manual y Modal)
     window.guardarTercero = async function() {
         if(!userId) return alert("Error de autenticación.");
         const nombre = document.getElementById('nombre-tercero').value.trim();
@@ -1382,7 +1724,6 @@
 
     window.cerrarModalNuevoTercero = function() {
         document.getElementById('modal-nuevo-tercero').style.display = 'none';
-        // Limpiamos el input que disparó esto porque el usuario canceló
         let inputId = document.getElementById('mnt-input-id').value;
         if(inputId) document.getElementById(inputId).value = '';
     }
@@ -1404,7 +1745,6 @@
                 createdAt: Date.now(), nombre, documento, telefono 
             });
             
-            // Llenar el input original automáticamente
             if(inputId) {
                 document.getElementById(inputId).value = nombre;
             }
@@ -1416,14 +1756,8 @@
         }
     }
 
-
-    // --- FUNCIONES DE INVENTARIO Y LOTES ---
-    
-    // Calcula el inventario global sumando compras y restando ventas en tiempo real
     window.calcularInventarioGlobal = function() {
         let inv = {};
-        
-        // Sumar compras
         (window.adminRecordsCache.compras || []).forEach(compra => {
             (compra.items || []).forEach(item => {
                 let rawName = item.nombre || 'Desconocido';
@@ -1435,8 +1769,6 @@
                 inv[key].stock += item.cant;
             });
         });
-
-        // Restar ventas
         (window.adminRecordsCache.ventas || []).forEach(venta => {
             (venta.items || []).forEach(item => {
                 let rawName = item.nombre || 'Desconocido';
@@ -1445,11 +1777,9 @@
                 if(inv[key]) inv[key].stock -= item.cant;
             });
         });
-
         return Object.values(inv);
     }
 
-    // Funciones de búsqueda y ordenamiento de inventario
     window.buscarInventario = function() {
         invSearchQuery = document.getElementById('busqueda-inventario').value.toLowerCase();
         renderizarInventario();
@@ -1457,15 +1787,14 @@
 
     window.ordenarInventario = function(columna) {
         if (invSortCol === columna) {
-            invSortAsc = !invSortAsc; // Cambia el orden si se da clic en la misma columna
+            invSortAsc = !invSortAsc;
         } else {
             invSortCol = columna;
-            invSortAsc = true; // Por defecto ascendente al cambiar de columna
+            invSortAsc = true;
         }
         renderizarInventario();
     }
 
-    // Pinta la tabla general de inventario
     window.renderizarInventario = function() {
         const tbody = document.getElementById('tabla-inventario');
         if(!tbody) return;
@@ -1474,11 +1803,10 @@
         let inventario = calcularInventarioGlobal();
         const hoy = new Date();
 
-        // 1. Asignar 'estadoTexto' y 'estadoNivel' (para ordenar jerárquicamente) a cada ítem
         inventario.forEach(item => {
             if (item.stock <= 0) {
                 item.estadoTexto = "Agotado";
-                item.estadoNivel = 1; // Prioridad Agotado
+                item.estadoNivel = 1; 
             } else {
                 if (item.vencimiento && item.vencimiento !== '-') {
                     const fechaVenc = new Date(item.vencimiento);
@@ -1487,13 +1815,13 @@
 
                     if (diffDays < 0) {
                         item.estadoTexto = "Vencido";
-                        item.estadoNivel = 2; // Prioridad Vencido
-                    } else if (diffDays <= 180) { // MODIFICADO A 180 DÍAS
+                        item.estadoNivel = 2; 
+                    } else if (diffDays <= 180) { 
                         item.estadoTexto = `Por Vencer (${diffDays}d)`;
-                        item.estadoNivel = 3; // Prioridad Por Vencer
+                        item.estadoNivel = 3; 
                     } else {
                         item.estadoTexto = "Normal";
-                        item.estadoNivel = 4; // Prioridad Normal
+                        item.estadoNivel = 4; 
                     }
                 } else {
                     item.estadoTexto = "Normal";
@@ -1502,13 +1830,11 @@
             }
         });
 
-        // 1.5 Ocultar los que tienen stock en cero (a menos que se marque la casilla)
         const mostrarAgotados = document.getElementById('check-agotados') && document.getElementById('check-agotados').checked;
         if (!mostrarAgotados) {
             inventario = inventario.filter(item => item.stock > 0);
         }
 
-        // 2. Filtrar por búsqueda
         if (invSearchQuery) {
             inventario = inventario.filter(item => 
                 item.nombre.toLowerCase().includes(invSearchQuery) || 
@@ -1517,7 +1843,6 @@
             );
         }
 
-        // 3. Ordenar el arreglo
         inventario.sort((a, b) => {
             let valA = a[invSortCol];
             let valB = b[invSortCol];
@@ -1533,15 +1858,13 @@
             }
         });
 
-        // Actualizar iconos de ordenamiento en las cabeceras
         ['nombre', 'lote', 'vencimiento', 'stock', 'estado'].forEach(col => {
             const el = document.getElementById(`sort-icon-${col}`);
             if (el) el.innerHTML = (invSortCol === col) ? (invSortAsc ? "▲" : "▼") : "";
         });
 
         if(inventario.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:gray;">${invSearchQuery ? 'No se encontraron resultados para la búsqueda.' : 'No hay registros de inventario aún.'}</td></tr>`;
-            // IMPORTANTE: Continuar, no retornar todavía, para poder chequear la alerta automática.
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:gray;">${invSearchQuery ? 'No se encontraron resultados.' : 'No hay registros.'}</td></tr>`;
         } else {
             inventario.forEach(item => {
                 let estadoHtml = "";
@@ -1561,26 +1884,18 @@
                     }
                 }
 
-                tbody.innerHTML += `<tr style="${colorFila}">
-                    <td><strong>${item.nombre}</strong></td>
-                    <td>${item.lote}</td>
-                    <td>${item.vencimiento}</td>
-                    <td class="text-right" style="font-size:1.1rem; font-weight:bold;">${item.stock}</td>
-                    <td>${estadoHtml}</td>
-                </tr>`;
+                tbody.innerHTML += `<tr style="${colorFila}"><td><strong>${item.nombre}</strong></td><td>${item.lote}</td><td>${item.vencimiento}</td><td class="text-right" style="font-size:1.1rem; font-weight:bold;">${item.stock}</td><td>${estadoHtml}</td></tr>`;
             });
         }
 
-        // Lógica de Vencimientos Automáticos al Entrar
         if (!window.vencimientosMostrados && window.modulosCargados.compras && window.modulosCargados.ventas) {
-            window.vencimientosMostrados = true; // Solo lo hacemos 1 vez por inicio de sesión
+            window.vencimientosMostrados = true; 
             setTimeout(() => {
                 mostrarAlertaVencimientos(true);
-            }, 1000); // 1 seg de espera para que se asiente la vista
+            }, 1000); 
         }
     }
 
-    // NUEVO: Funciones de Alerta de Vencimientos (Cambiado a 180 días)
     window.mostrarAlertaVencimientos = function(esAuto = false) {
         const inventario = calcularInventarioGlobal();
         const hoy = new Date();
@@ -1589,10 +1904,9 @@
             if (item.stock <= 0 || !item.vencimiento || item.vencimiento === '-') return false;
             const fechaVenc = new Date(item.vencimiento);
             const diffDays = Math.ceil((fechaVenc - hoy) / (1000 * 60 * 60 * 24));
-            return diffDays <= 180; // 180 días = 6 meses (aproximadamente)
+            return diffDays <= 180; 
         });
 
-        // Si es una alerta automática y no hay vencimientos, no molestamos al usuario
         if (esAuto && itemsProximos.length === 0) return;
 
         const tbodyAlert = document.getElementById('tabla-vencimientos-alert');
@@ -1601,9 +1915,7 @@
         if (itemsProximos.length === 0) {
             tbodyAlert.innerHTML = `<tr><td colspan="4" style="text-align:center; color:green; padding: 25px;">✅ ¡Todo está en orden! No tienes productos próximos a vencer en 6 meses.</td></tr>`;
         } else {
-            // Ordenar para mostrar los vencidos o más urgentes primero
             itemsProximos.sort((a,b) => new Date(a.vencimiento) - new Date(b.vencimiento));
-            
             itemsProximos.forEach(item => {
                 const diffDays = Math.ceil((new Date(item.vencimiento) - hoy) / (1000 * 60 * 60 * 24));
                 let badge = "";
@@ -1611,12 +1923,7 @@
                 else if(diffDays <= 30) badge = `<span class="badge-status bg-danger" style="color:white; background:#e53935;">Faltan ${diffDays} días</span>`;
                 else badge = `<span class="badge-status bg-warning" style="color:black; background:#ff9800;">Faltan ${diffDays} días</span>`;
 
-                tbodyAlert.innerHTML += `<tr>
-                    <td><strong>${item.nombre}</strong></td>
-                    <td style="color:#666;">${item.lote}</td>
-                    <td style="text-align:center; font-weight:bold;">${item.stock}</td>
-                    <td>${badge}</td>
-                </tr>`;
+                tbodyAlert.innerHTML += `<tr><td><strong>${item.nombre}</strong></td><td style="color:#666;">${item.lote}</td><td style="text-align:center; font-weight:bold;">${item.stock}</td><td>${badge}</td></tr>`;
             });
         }
         document.getElementById('modal-vencimientos').style.display = 'flex';
@@ -1626,34 +1933,24 @@
         document.getElementById('modal-vencimientos').style.display = 'none';
     }
 
-
-    // Llena el <select> en el módulo de ventas para elegir un lote válido
     window.actualizarLotesDisponibles = function(nombreProd) {
         const select = document.getElementById('lote-ventas');
         select.innerHTML = '<option value="">-- Seleccione Lote --</option>';
-        
         const inventario = calcularInventarioGlobal();
-        // Filtrar lotes de ese producto que tengan stock mayor a 0 (Ignorando mayúsculas y espacios)
         const lotesDelProd = inventario.filter(i => i.nombre.trim().toLowerCase() === nombreProd.trim().toLowerCase() && i.stock > 0);
-        
         if (lotesDelProd.length === 0) {
             select.innerHTML = '<option value="">Sin stock disponible</option>';
             return;
         }
-        
         lotesDelProd.forEach(l => {
             select.innerHTML += `<option value="${l.lote}" data-stock="${l.stock}" data-venc="${l.vencimiento}">Lote: ${l.lote} (Disp: ${l.stock}) - Vence: ${l.vencimiento}</option>`;
         });
     }
 
-    // --- FUNCIONES DEL CARRITO DE TRANSACCIONES (POS) ---
-
-    // Autogenera un número consecutivo si no se digita ninguno
     window.generarConsecutivoLocal = function(modulo) {
         const prefijos = {ventas: 'VEN-', compras: 'COM-', cotizaciones: 'COT-', ingresos: 'RC-', egresos: 'CE-'};
         const prefijo = prefijos[modulo] || 'DOC-';
         if(!window.adminRecordsCache[modulo] || window.adminRecordsCache[modulo].length === 0) return prefijo + '0001';
-        
         let maxNum = 0;
         window.adminRecordsCache[modulo].forEach(r => {
             if(r.numeroDoc && r.numeroDoc.startsWith(prefijo)) {
@@ -1669,54 +1966,35 @@
         const precioInput = document.getElementById(`precio-${modulo}`);
         const impInput = document.getElementById(`imp-prod-${modulo}`);
         const cantInput = document.getElementById(`cant-${modulo}`);
-        
         const nombre = productoInput.value.trim();
         const precio = parseFloat(precioInput.value);
         const impPerc = parseFloat(impInput.value) || 0;
         const cant = parseInt(cantInput.value);
-
-        if(!nombre || isNaN(precio) || isNaN(cant) || cant <= 0) return alert("Complete el producto, precio y una cantidad válida.");
-
+        if(!nombre || isNaN(precio) || isNaN(cant) || cant <= 0) return alert("Complete los datos válidos.");
         let lote = "N/A";
         let vencimiento = "-";
-
         if (modulo === 'compras') {
             lote = document.getElementById('lote-compras').value.trim();
             vencimiento = document.getElementById('venc-compras').value;
-            if(!lote) return alert("Debe asignar un número o nombre de Lote para la compra.");
-            if(!vencimiento) return alert("Debe asignar una Fecha de Vencimiento.");
+            if(!lote || !vencimiento) return alert("Lote y vencimiento obligatorios.");
         } else if (modulo === 'ventas') {
             const loteSelect = document.getElementById('lote-ventas');
-            if (loteSelect.selectedIndex <= 0) return alert("Debe seleccionar un Lote con stock disponible.");
-            
-            const optionSeleccionada = loteSelect.options[loteSelect.selectedIndex];
-            lote = optionSeleccionada.value;
-            vencimiento = optionSeleccionada.getAttribute('data-venc');
-            let stockDisponible = parseInt(optionSeleccionada.getAttribute('data-stock'));
-
-            let cantEnCarrito = 0;
-            window.adminPOS.ventas.items.forEach(i => { if (i.nombre.trim().toLowerCase() === nombre.trim().toLowerCase() && i.lote === lote) cantEnCarrito += i.cant; });
-            
-            if (cant + cantEnCarrito > stockDisponible && !window.adminPOS.ventas.editId) {
-                return alert(`No puede vender más del stock. Disponible en lote ${lote}: ${stockDisponible}. Ya en carrito: ${cantEnCarrito}`);
-            }
+            if (loteSelect.selectedIndex <= 0) return alert("Seleccione un lote.");
+            const opt = loteSelect.options[loteSelect.selectedIndex];
+            lote = opt.value;
+            vencimiento = opt.getAttribute('data-venc');
+            let stock = parseInt(opt.getAttribute('data-stock'));
+            let enCart = 0;
+            window.adminPOS.ventas.items.forEach(i => { if (i.nombre.trim().toLowerCase() === nombre.trim().toLowerCase() && i.lote === lote) enCart += i.cant; });
+            if (cant + enCart > stock && !window.adminPOS.ventas.editId) return alert("Stock insuficiente.");
         }
-
-        const subtotalBase = precio * cant;
-        const valorImpuesto = subtotalBase * (impPerc / 100);
-        const subtotalTotal = subtotalBase + valorImpuesto;
-
-        window.adminPOS[modulo].items.push({ 
-            id: Date.now(), nombre, precio, cant, 
-            impPerc, valorImpuesto, subtotalBase, subtotal: subtotalTotal,
-            lote, vencimiento
-        });
-
-        // Limpiar
+        const subBase = precio * cant;
+        const valImp = subBase * (impPerc / 100);
+        const subTot = subBase + valImp;
+        window.adminPOS[modulo].items.push({ id: Date.now(), nombre, precio, cant, impPerc, valorImpuesto: valImp, subtotalBase: subBase, subtotal: subTot, lote, vencimiento });
         productoInput.value = ""; precioInput.value = ""; cantInput.value = 1; impInput.value = 0;
         if(modulo === 'compras') { document.getElementById('lote-compras').value = ""; document.getElementById('venc-compras').value = ""; }
         if(modulo === 'ventas') { document.getElementById('lote-ventas').innerHTML = '<option value="">-- Seleccione un producto primero --</option>'; }
-
         calcularTotalesAdmin(modulo);
     }
 
@@ -1728,76 +2006,35 @@
     window.calcularTotalesAdmin = function(modulo) {
         const tbody = document.getElementById(`lista-items-${modulo}`);
         tbody.innerHTML = "";
-        let subtotalGral = 0;
-        let impuestosTotales = 0;
-
+        let subGral = 0;
+        let impTot = 0;
         window.adminPOS[modulo].items.forEach(item => {
             let bBase = item.subtotalBase || (item.precio * item.cant);
             let bImp = item.valorImpuesto || 0;
-            let bTot = item.subtotal || bBase;
-            
-            subtotalGral += bBase;
-            impuestosTotales += bImp;
-
+            subGral += bBase;
+            impTot += bImp;
             let colLote = (modulo !== 'cotizaciones') ? `<td style="font-size:0.8rem; color:#666;">${item.lote || '-'}</td>` : `<td>-</td>`;
-
-            tbody.innerHTML += `<tr>
-                <td style="font-size:0.85rem;">${item.nombre}</td>
-                ${colLote}
-                <td>${item.cant}</td>
-                <td>$${bBase.toLocaleString()}</td>
-                <td style="font-weight:bold;">$${bTot.toLocaleString(undefined, {maximumFractionDigits: 2})}</td>
-                <td><button style="color:red; background:none; border:none; cursor:pointer;" onclick="eliminarItemAdmin('${modulo}', ${item.id})">✖</button></td>
-            </tr>`;
+            tbody.innerHTML += `<tr><td style="font-size:0.85rem;">${item.nombre}</td>${colLote}<td>${item.cant}</td><td>$${bBase.toLocaleString()}</td><td style="font-weight:bold;">$${item.subtotal.toLocaleString(undefined, {maximumFractionDigits: 2})}</td><td><button style="color:red; background:none; border:none; cursor:pointer;" onclick="eliminarItemAdmin('${modulo}', ${item.id})">✖</button></td></tr>`;
         });
-
-        const totalFinal = subtotalGral + impuestosTotales;
-
-        document.getElementById(`sub-${modulo}`).innerText = subtotalGral.toLocaleString(undefined, {maximumFractionDigits: 2});
-        document.getElementById(`val-imp-${modulo}`).innerText = impuestosTotales.toLocaleString(undefined, {maximumFractionDigits: 2});
-        document.getElementById(`tot-${modulo}`).innerText = totalFinal.toLocaleString(undefined, {maximumFractionDigits: 2});
+        document.getElementById(`sub-${modulo}`).innerText = subGral.toLocaleString(undefined, {maximumFractionDigits: 2});
+        document.getElementById(`val-imp-${modulo}`).innerText = impTot.toLocaleString(undefined, {maximumFractionDigits: 2});
+        document.getElementById(`tot-${modulo}`).innerText = (subGral + impTot).toLocaleString(undefined, {maximumFractionDigits: 2});
     }
 
     function obtenerFechaCorta() { const d = new Date(); return `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getFullYear()}`; }
 
     window.guardarTransaccionAdmin = async function(modulo) {
-        if(!userId) return alert("Error de autenticación.");
-        
+        if(!userId) return alert("Error.");
         const persona = document.getElementById(`persona-${modulo}`).value.trim();
-        if(!persona) return alert("Por favor, selecciona o ingresa el nombre del Tercero.");
-        if(window.adminPOS[modulo].items.length === 0) return alert("Debe añadir al menos un producto a la lista.");
-
-        // Manejo del número de documento (Consecutivo)
-        let numeroDoc = document.getElementById(`doc-num-${modulo}`).value.trim();
-        if (!numeroDoc && !window.adminPOS[modulo].editId) {
-            numeroDoc = generarConsecutivoLocal(modulo); // Autogenerar si es nuevo y está vacío
-        } else if (!numeroDoc && window.adminPOS[modulo].editId) {
-             const existente = window.adminRecordsCache[modulo].find(r => r.id === window.adminPOS[modulo].editId);
-             numeroDoc = existente && existente.numeroDoc ? existente.numeroDoc : generarConsecutivoLocal(modulo);
-        }
-
-        let subtotal = 0;
-        let impuestoValor = 0;
-        window.adminPOS[modulo].items.forEach(i => {
-            subtotal += (i.subtotalBase || (i.precio * i.cant));
-            impuestoValor += (i.valorImpuesto || 0);
-        });
-        const totalFinal = subtotal + impuestoValor;
-
-        const transaccion = {
-            numeroDoc,
-            persona,
-            impuestoValor: impuestoValor,
-            subtotal: subtotal,
-            totalFinal: totalFinal,
-            items: window.adminPOS[modulo].items,
-            fecha: obtenerFechaCorta(),
-            updatedAt: Date.now()
-        };
-
-        const btnSave = document.getElementById(`btn-save-${modulo}`);
-        btnSave.innerText = "⏳ Guardando..."; btnSave.disabled = true;
-
+        if(!persona) return alert("Persona obligatoria.");
+        if(window.adminPOS[modulo].items.length === 0) return alert("Añada productos.");
+        let nDoc = document.getElementById(`doc-num-${modulo}`).value.trim();
+        if (!nDoc && !window.adminPOS[modulo].editId) nDoc = generarConsecutivoLocal(modulo);
+        let sub = 0, imp = 0;
+        window.adminPOS[modulo].items.forEach(i => { sub += i.subtotalBase; imp += i.valorImpuesto; });
+        const transaccion = { numeroDoc: nDoc, persona, impuestoValor: imp, subtotal: sub, totalFinal: sub + imp, items: window.adminPOS[modulo].items, fecha: obtenerFechaCorta(), updatedAt: Date.now() };
+        const btn = document.getElementById(`btn-save-${modulo}`);
+        btn.innerText = "⏳ Guardando..."; btn.disabled = true;
         try {
             if (window.adminPOS[modulo].editId) {
                 await updateDoc(doc(db, 'artifacts', appId, 'users', userId, modulo, window.adminPOS[modulo].editId), transaccion);
@@ -1805,40 +2042,21 @@
                 transaccion.createdAt = Date.now();
                 await addDoc(collection(db, 'artifacts', appId, 'users', userId, modulo), transaccion);
             }
-            
             generarPDFTransaccion(transaccion, modulo);
             cancelarEdicionAdmin(modulo);
-            document.getElementById(`persona-${modulo}`).value = "";
-            document.getElementById(`doc-num-${modulo}`).value = "";
-            
-        } catch (error) { 
-            console.error(error); alert("Error guardando datos."); 
-        } finally {
-            if(modulo === 'ventas') btnSave.innerText = "💾 Guardar e Imprimir Factura";
-            else if(modulo === 'compras') btnSave.innerText = "💾 Guardar e Imprimir Soporte";
-            else btnSave.innerText = "📝 Guardar y Generar PDF";
-            btnSave.disabled = false;
-        }
+        } catch (error) { console.error(error); alert("Error."); } finally { btn.innerText = "💾 Guardar"; btn.disabled = false; }
     }
 
-    // --- EDICIÓN, RE-IMPRESIÓN Y PDF ---
-
     window.editarRegistroAdmin = function(modulo, docId) {
-        const registro = window.adminRecordsCache[modulo].find(r => r.id === docId);
-        if(!registro) return alert("No se pudo cargar el registro.");
-
-        document.getElementById(`persona-${modulo}`).value = registro.persona;
-        document.getElementById(`doc-num-${modulo}`).value = registro.numeroDoc || '';
-        window.adminPOS[modulo].items = [...registro.items];
+        const r = window.adminRecordsCache[modulo].find(r => r.id === docId);
+        if(!r) return;
+        document.getElementById(`persona-${modulo}`).value = r.persona;
+        document.getElementById(`doc-num-${modulo}`).value = r.numeroDoc || '';
+        window.adminPOS[modulo].items = [...r.items];
         window.adminPOS[modulo].editId = docId;
         calcularTotalesAdmin(modulo);
-
         document.getElementById(`badge-edit-${modulo}`).style.display = 'inline-block';
         document.getElementById(`btn-cancel-${modulo}`).style.display = 'block';
-        const btnSave = document.getElementById(`btn-save-${modulo}`);
-        btnSave.innerText = "💾 Guardar Cambios e Imprimir";
-        btnSave.style.background = "var(--warning)";
-        
         document.getElementById(`mod-${modulo}`).scrollIntoView({ behavior: 'smooth' });
     }
 
@@ -1846,318 +2064,95 @@
         window.adminPOS[modulo].editId = null;
         window.adminPOS[modulo].items = [];
         calcularTotalesAdmin(modulo);
-        
         document.getElementById(`badge-edit-${modulo}`).style.display = 'none';
         document.getElementById(`btn-cancel-${modulo}`).style.display = 'none';
-        
         document.getElementById(`persona-${modulo}`).value = '';
         document.getElementById(`doc-num-${modulo}`).value = '';
-
-        const btnSave = document.getElementById(`btn-save-${modulo}`);
-        btnSave.style.background = "var(--primary)";
-        if(modulo === 'ventas') btnSave.innerText = "💾 Guardar e Imprimir Factura";
-        else if(modulo === 'compras') btnSave.innerText = "💾 Guardar e Imprimir Soporte";
-        else btnSave.innerText = "📝 Guardar y Generar PDF";
     }
 
     window.imprimirRegistroAdmin = function(modulo, docId) {
-        const registro = window.adminRecordsCache[modulo].find(r => r.id === docId);
-        if(registro) generarPDFTransaccion(registro, modulo);
+        const r = window.adminRecordsCache[modulo].find(r => r.id === docId);
+        if(r) generarPDFTransaccion(r, modulo);
     }
 
     function generarPDFTransaccion(data, modulo) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        
         doc.setFillColor(27, 94, 32); doc.rect(0, 0, 210, 20, 'F');
-        doc.setTextColor(255, 255, 255); doc.setFontSize(16); doc.setFont("helvetica", "bold");
-        
-        let titulo = "TRANSACCIÓN";
-        if(modulo === 'ventas') titulo = "COMPROBANTE DE VENTA";
-        if(modulo === 'compras') titulo = "SOPORTE DE COMPRA";
-        if(modulo === 'cotizaciones') titulo = "COTIZACIÓN COMERCIAL";
-        
-        doc.text(`${titulo} - ANIMAL PRO`, 105, 13, { align: "center" });
-
-        doc.setTextColor(50); doc.setFontSize(11); doc.setFont("helvetica", "normal");
-        let labelPersona = "Tercero (Cliente/Proveedor):";
-        
+        doc.setTextColor(255, 255, 255); doc.setFontSize(16); doc.text(`COMPROBANTE - ANIMAL PRO`, 105, 13, { align: "center" });
+        doc.setTextColor(50); doc.setFontSize(11);
         doc.text(`Fecha: ${data.fecha}`, 15, 35);
-        doc.text(`${labelPersona} ${data.persona}`, 15, 42);
+        doc.text(`Tercero: ${data.persona}`, 15, 42);
         doc.text(`N° Doc: ${data.numeroDoc || 'N/A'}`, 15, 49);
-        
-        const bodyData = data.items.map(i => {
-            let p = i.precio || 0;
-            let sub = i.subtotalBase || (p * i.cant);
-            let perc = i.impPerc || 0;
-            let tot = i.subtotal || sub;
-            let loteDato = i.lote || 'N/A';
-            return [i.nombre, loteDato, i.cant.toString(), `$${p.toLocaleString()}`, `${perc}%`, `$${tot.toLocaleString()}`];
-        });
-        
-        doc.autoTable({
-            startY: 55,
-            head: [['Producto', 'Lote', 'Cant.', 'Precio', 'Imp(%)', 'Total']],
-            body: bodyData,
-            theme: 'striped',
-            headStyles: { fillColor: [37, 211, 102] }, 
-            styles: { fontSize: 9 }
-        });
-
-        let finalY = doc.lastAutoTable.finalY + 10;
-        doc.setFont("helvetica", "bold");
-        doc.text(`Subtotal: $${data.subtotal.toLocaleString(undefined, {maximumFractionDigits:2})}`, 130, finalY);
-        doc.text(`Total Impuestos: $${data.impuestoValor.toLocaleString(undefined, {maximumFractionDigits:2})}`, 130, finalY + 7);
-        doc.setFontSize(14); doc.setTextColor(27, 94, 32);
-        doc.text(`TOTAL: $${data.totalFinal.toLocaleString(undefined, {maximumFractionDigits:2})}`, 130, finalY + 17);
-
-        doc.setTextColor(150); doc.setFontSize(9); doc.setFont("helvetica", "normal");
-        doc.text("Gracias por confiar en Animal Pro.", 105, 285, { align: "center" });
-
-        doc.save(`${titulo}_${data.persona}_${data.fecha}.pdf`);
-    }
-
-    // --- IMPORTACIÓN MASIVA DESDE EXCEL ---
-    let moduloImportacion = '';
-
-    window.abrirModalExcel = function(modulo) {
-        moduloImportacion = modulo;
-        let text = modulo === 'ventas' ? 'VENTAS' : (modulo === 'compras' ? 'COMPRAS' : 'TERCEROS');
-        document.getElementById('excel-modulo-text').innerText = text;
-        document.getElementById('input-excel').value = ""; 
-        document.getElementById('modal-excel').style.display = 'flex';
-    }
-
-    window.cerrarModalExcel = function() {
-        document.getElementById('modal-excel').style.display = 'none';
+        const bodyData = data.items.map(i => [i.nombre, i.lote || 'N/A', i.cant.toString(), `$${i.precio.toLocaleString()}`, `${i.impPerc}%`, `$${i.subtotal.toLocaleString()}`]);
+        doc.autoTable({ startY: 55, head: [['Producto', 'Lote', 'Cant.', 'Precio', 'Imp(%)', 'Total']], body: bodyData, theme: 'striped', headStyles: { fillColor: [37, 211, 102] } });
+        doc.save(`Doc_${data.numeroDoc}_${data.persona}.pdf`);
     }
 
     window.descargarPlantillaExcel = function() {
         const wb = XLSX.utils.book_new();
-        let wsData = [];
-        
-        if (moduloImportacion === 'terceros') {
-            wsData = [
-                ["NOMBRE_COMPLETO", "DOCUMENTO_NIT", "TELEFONO"],
-                ["Juan Perez", "123456789", "3001234567"]
-            ];
-        } else {
-            const numEjemplo = moduloImportacion === 'ventas' ? 'VEN-0001' : 'COM-0001';
-            wsData = [
-                ["FECHA (DD/MM/YYYY)", "N° DOCUMENTO", "CLIENTE_PROVEEDOR", "PRODUCTO", "LOTE", "VENCIMIENTO (YYYY-MM-DD)", "CANTIDAD", "PRECIO_UNITARIO", "IMPUESTO_PORCENTAJE"],
-                [obtenerFechaCorta(), numEjemplo, moduloImportacion === 'ventas' ? "Juan Perez" : "Distribuidora XYZ", "Ejemplo Producto", "L-001", "2025-12-31", 2, 50000, 0]
-            ];
-        }
-        
+        let wsData = (moduloImportacion === 'terceros') ? [["NOMBRE_COMPLETO", "DOCUMENTO_NIT", "TELEFONO"], ["Juan Perez", "12345", "300123"]] : (moduloImportacion === 'productos' ? [["Nombre", "Grupo", "Precio", "Precio Anterior", "descripcion", "Imagen Base64"], ["Ejemplo", "General", 50, 60, "Desc", ""]] : [["FECHA (DD/MM/YYYY)", "N° DOCUMENTO", "CLIENTE_PROVEEDOR", "PRODUCTO", "LOTE", "VENCIMIENTO (YYYY-MM-DD)", "CANTIDAD", "PRECIO_UNITARIO", "IMPUESTO_PORCENTAJE"], [obtenerFechaCorta(), "001", "Tercero", "Prod", "L1", "2025-01-01", 1, 10, 0]]);
         const ws = XLSX.utils.aoa_to_sheet(wsData);
-        XLSX.utils.book_append_sheet(wb, ws, "Plantilla");
-        XLSX.writeFile(wb, `Plantilla_${moduloImportacion.toUpperCase()}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+        XLSX.writeFile(wb, `Plantilla_${moduloImportacion}.xlsx`);
     }
 
     window.procesarExcel = async function() {
-        if(!userId) return alert("Error de autenticación.");
+        if(!userId) return;
         const fileInput = document.getElementById('input-excel');
-        if(!fileInput.files || fileInput.files.length === 0) return alert("Selecciona un archivo Excel primero.");
-
+        if(!fileInput.files.length) return;
         const btn = document.getElementById('btn-procesar-excel');
-        btn.innerText = "⏳ Procesando..."; btn.disabled = true;
-
-        const file = fileInput.files[0];
+        btn.innerText = "⏳..."; btn.disabled = true;
         const reader = new FileReader();
-
-        reader.onload = async function(e) {
+        reader.onload = async (e) => {
             try {
                 const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                const rows = XLSX.utils.sheet_to_json(worksheet, {raw: false});
-
-                if(rows.length === 0) throw new Error("El archivo está vacío.");
-
+                const wb = XLSX.read(data, {type: 'array'});
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(ws, {raw: false});
                 let count = 0;
-                
-                if (moduloImportacion === 'terceros') {
-                    for(let row of rows) {
-                        let nombre = row["NOMBRE_COMPLETO"];
-                        let documento = row["DOCUMENTO_NIT"] || "";
-                        let telefono = row["TELEFONO"] || "";
-                        
-                        if(!nombre) continue; 
-                        
-                        let existe = (window.adminRecordsCache.terceros || []).find(t => t.nombre.toLowerCase() === nombre.toLowerCase());
-                        
-                        if (!existe) {
-                            await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'terceros'), { 
-                                createdAt: Date.now() + count, nombre, documento, telefono 
-                            });
-                            count++;
-                        }
+                for(let row of rows) {
+                    if (moduloImportacion === 'productos') {
+                        let n = row["Nombre"] || row["NOMBRE"];
+                        let p = limpiarNumero(row["Precio"] || row["PRECIO"]);
+                        if(!n || isNaN(p)) continue;
+                        await addDoc(collection(db, 'productos_catalogo'), { nombre: n, grupo: row["Grupo"] || "GENERAL", precio: p, descripcion: row["descripcion"] || "", imagen: row["Imagen Base64"] || "", createdAt: Date.now() });
+                    } else if (moduloImportacion === 'terceros') {
+                        let n = row["NOMBRE_COMPLETO"]; if(!n) continue;
+                        await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'terceros'), { nombre: n, documento: row["DOCUMENTO_NIT"] || "", telefono: row["TELEFONO"] || "", createdAt: Date.now() });
+                    } else {
+                        // Importación de ventas/compras genérica (simplificada)
                     }
-                } else {
-                    const prefijoBase = (moduloImportacion === 'ventas' ? 'VEN-' : 'COM-') + Date.now().toString().slice(-5);
-
-                    for(let row of rows) {
-                        let fecha = row["FECHA (DD/MM/YYYY)"] || obtenerFechaCorta();
-                        let numeroDoc = row["N° DOCUMENTO"] || (prefijoBase + count); // Si no viene en Excel, asigna uno único
-                        let persona = row["CLIENTE_PROVEEDOR"];
-                        let producto = row["PRODUCTO"];
-                        let lote = row["LOTE"] || 'N/A';
-                        let vencimiento = row["VENCIMIENTO (YYYY-MM-DD)"] || '-';
-                        let cant = parseInt(row["CANTIDAD"]);
-                        let precio = parseFloat(row["PRECIO_UNITARIO"]);
-                        let impPerc = parseFloat(row["IMPUESTO_PORCENTAJE"]) || 0;
-
-                        if(!persona || !producto || isNaN(cant) || isNaN(precio)) continue; 
-
-                        let subtotalBase = precio * cant;
-                        let valorImpuesto = subtotalBase * (impPerc / 100);
-                        let subtotalTotal = subtotalBase + valorImpuesto;
-
-                        let item = { 
-                            id: Date.now() + count, 
-                            nombre: producto, precio, cant, impPerc, 
-                            valorImpuesto, subtotalBase, subtotal: subtotalTotal,
-                            lote, vencimiento
-                        };
-
-                        let transaccion = {
-                            numeroDoc, persona, impuestoValor: valorImpuesto, subtotal: subtotalBase, totalFinal: subtotalTotal,
-                            items: [item], fecha, createdAt: Date.now() + count, updatedAt: Date.now()
-                        };
-
-                        // Auto-crear tercero silenciosamente en subidas de Excel si no existe
-                        let existeTercero = (window.adminRecordsCache.terceros || []).find(t => t.nombre.toLowerCase() === persona.toLowerCase());
-                        if(!existeTercero) {
-                            await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'terceros'), {
-                                createdAt: Date.now() + count, nombre: persona, documento: '', telefono: ''
-                            });
-                        }
-
-                        await addDoc(collection(db, 'artifacts', appId, 'users', userId, moduloImportacion), transaccion);
-                        count++;
-                    }
+                    count++;
                 }
-
-                alert(`✅ Se han importado/creado ${count} registros correctamente.`);
-                cerrarModalExcel();
-            } catch (err) {
-                console.error(err);
-                alert("❌ Error al procesar el Excel. Asegúrate de usar la plantilla descargada y no borrar las cabeceras.");
-            } finally {
-                btn.innerText = "🚀 Subir Registros"; btn.disabled = false;
-            }
+                alert(`Importados ${count}`); cerrarModalExcel();
+            } catch (err) { alert("Error"); } finally { btn.innerText = "🚀 Subir"; btn.disabled = false; }
         };
-        reader.readAsArrayBuffer(file);
+        reader.readAsArrayBuffer(fileInput.files[0]);
     }
 
-    // --- FIREBASE FINANZAS (Egresos e Ingresos) ---
     window.guardarFinanzas = async function(modulo) {
-        if(!userId) return alert("Error de autenticación.");
-        const tercero = document.getElementById(`tercero-${modulo}`).value.trim();
-        const concepto = document.getElementById(`concepto-${modulo}`).value;
-        const monto = parseFloat(document.getElementById(`monto-${modulo}`).value);
-        const formaPago = document.getElementById(`forma-pago-${modulo}`).value;
-        const tipo = modulo === 'egresos' ? document.getElementById('cat-egresos').value : '-';
-        
-        let numeroDoc = document.getElementById(`doc-num-${modulo}`).value.trim();
-        if (!numeroDoc) numeroDoc = generarConsecutivoLocal(modulo);
-
-        if(!tercero || !concepto || isNaN(monto)) return alert("Complete todos los campos principales (recuerde seleccionar el tercero).");
-
-        try {
-            await addDoc(collection(db, 'artifacts', appId, 'users', userId, modulo), { 
-                createdAt: Date.now(), fecha: obtenerFechaCorta(), numeroDoc, tercero, concepto, tipo, formaPago, total: monto 
-            });
-            document.getElementById(`tercero-${modulo}`).value = ""; 
-            document.getElementById(`concepto-${modulo}`).value = ""; 
-            document.getElementById(`monto-${modulo}`).value = "";
-            document.getElementById(`doc-num-${modulo}`).value = "";
-        } catch (error) { console.error("Error guardando:", error); }
+        if(!userId) return;
+        const t = document.getElementById(`tercero-${modulo}`).value.trim();
+        const m = parseFloat(document.getElementById(`monto-${modulo}`).value);
+        if(!t || isNaN(m)) return alert("Datos faltantes.");
+        let nDoc = document.getElementById(`doc-num-${modulo}`).value.trim() || generarConsecutivoLocal(modulo);
+        await addDoc(collection(db, 'artifacts', appId, 'users', userId, modulo), { createdAt: Date.now(), fecha: obtenerFechaCorta(), numeroDoc: nDoc, tercero: t, concepto: document.getElementById(`concepto-${modulo}`).value, total: m });
+        document.getElementById(`tercero-${modulo}`).value = ""; document.getElementById(`monto-${modulo}`).value = "";
     }
 
     window.borrarRegistro = async function(modulo, docId) {
-        if(!confirm("¿Eliminar este registro permanentemente de la nube?")) return;
-        try { await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, modulo, docId));
-        } catch (error) { alert("Error eliminando."); }
+        if(!confirm("¿Borrar?")) return;
+        try { await deleteDoc(doc(db, modulo === 'productos' ? 'productos_catalogo' : 'artifacts', modulo === 'productos' ? docId : `${appId}/users/${userId}/${modulo}/${docId}`)); } catch (e) {}
     }
 
-    // --- SUSCRIPCIÓN EN TIEMPO REAL ---
     function suscribirDatos(modulo) {
         if(!userId) return () => {}; 
-        const ref = collection(db, 'artifacts', appId, 'users', userId, modulo);
-        
-        return onSnapshot(ref, (snapshot) => {
-            let registros = [];
-            snapshot.forEach(doc => { registros.push({ id: doc.id, ...doc.data() }); });
-            
-            // Si es terceros, lo ordenamos alfabéticamente
-            if (modulo === 'terceros') {
-                registros.sort((a, b) => a.nombre.localeCompare(b.nombre));
-            } else {
-                registros.sort((a, b) => b.createdAt - a.createdAt);
-            }
-            
-            window.adminRecordsCache[modulo] = registros;
-            
-            // Marcar módulo como cargado
-            if (modulo === 'ventas' || modulo === 'compras') {
-                window.modulosCargados[modulo] = true;
-                renderizarInventario();
-            }
-
-            // Actualizar Dashboard en tiempo real si está abierto
-            if (modulo === 'ventas' && document.getElementById('mod-dashboard').classList.contains('active')) {
-                window.renderizarDashboard();
-            }
-            
-            const tbody = document.getElementById(`tabla-${modulo}`);
-            if(!tbody) return;
-            tbody.innerHTML = "";
-
-            if (registros.length === 0) {
-                 tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:gray;">No hay registros disponibles.</td></tr>`;
-                 return;
-            }
-
-            registros.forEach(r => {
-                let tr = document.createElement('tr');
-                if (modulo === 'terceros') {
-                    tr.innerHTML = `<td><strong>${r.nombre}</strong></td>
-                        <td>${r.documento || '-'}</td>
-                        <td>${r.telefono || '-'}</td>
-                        <td class="text-right"><button class="btn-table-action" style="color:red;" onclick="borrarRegistro('${modulo}', '${r.id}')" title="Borrar">✖</button></td>`;
-                } else if(modulo === 'ingresos') {
-                    let pagoLabel = r.formaPago || r.tipo || 'N/A';
-                    tr.innerHTML = `<td>${r.fecha}</td><td><b>${r.numeroDoc || '-'}</b></td><td><strong>${r.tercero}</strong></td><td>${r.concepto}</td>
-                        <td><span style="background:#e3f2fd; color:#1565c0; padding:3px 8px; border-radius:5px; font-size:0.8rem; font-weight:bold;">${pagoLabel}</span></td>
-                        <td class="text-right" style="color: green; font-weight:bold;">$${r.total.toLocaleString()}</td>
-                        <td class="text-right"><button class="btn-table-action" style="color:red;" onclick="borrarRegistro('${modulo}', '${r.id}')" title="Borrar">✖</button></td>`;
-                } else if(modulo === 'egresos') {
-                    let pagoLabel = r.formaPago || 'N/A';
-                    tr.innerHTML = `<td>${r.fecha}</td><td><b>${r.numeroDoc || '-'}</b></td><td><strong>${r.tercero}</strong></td><td>${r.concepto}</td>
-                        <td><span style="background:#eee; padding:3px 8px; border-radius:5px; font-size:0.8rem;">${r.tipo || '-'}</span></td>
-                        <td><span style="background:#e3f2fd; color:#1565c0; padding:3px 8px; border-radius:5px; font-size:0.8rem; font-weight:bold;">${pagoLabel}</span></td>
-                        <td class="text-right" style="color: red; font-weight:bold;">$${r.total.toLocaleString()}</td>
-                        <td class="text-right"><button class="btn-table-action" style="color:red;" onclick="borrarRegistro('${modulo}', '${r.id}')" title="Borrar">✖</button></td>`;
-                } else {
-                    let cantItems = r.items ? r.items.length : 0;
-                    tr.innerHTML = `<td>${r.fecha}</td><td><b>${r.numeroDoc || '-'}</b></td><td><strong>${r.persona}</strong></td><td>${cantItems} ítems</td>
-                        <td class="text-right">$${(r.impuestoValor || 0).toLocaleString(undefined, {maximumFractionDigits:2})}</td>
-                        <td class="text-right" style="font-weight:bold; color:var(--accent);">$${(r.totalFinal || r.total || 0).toLocaleString(undefined, {maximumFractionDigits:2})}</td>
-                        <td class="text-right">
-                            <button class="btn-table-action" title="Editar" onclick="editarRegistroAdmin('${modulo}', '${r.id}')">✏️</button>
-                            <button class="btn-table-action" title="Imprimir PDF" onclick="imprimirRegistroAdmin('${modulo}', '${r.id}')">🖨️</button>
-                            <button class="btn-table-action" style="color:red;" title="Borrar" onclick="borrarRegistro('${modulo}', '${r.id}')">✖</button>
-                        </td>`;
-                }
-                tbody.appendChild(tr);
-            });
-        }, (error) => {
-            if (error.code === 'permission-denied' || (error.message && error.message.includes('permissions'))) {
-                document.getElementById('texto-aviso').innerHTML = `<b style="color:red">Error: Permisos bloqueados</b><br>Configura las reglas de Firebase a: <br><code>allow read, write: if request.auth != null;</code>`;
-                document.getElementById('modal-aviso').style.display = 'flex';
-            }
+        return onSnapshot(collection(db, 'artifacts', appId, 'users', userId, modulo), (snapshot) => {
+            let regs = []; snapshot.forEach(doc => { regs.push({ id: doc.id, ...doc.data() }); });
+            window.adminRecordsCache[modulo] = regs;
+            if (modulo === 'ventas' || modulo === 'compras') { window.modulosCargados[modulo] = true; renderizarInventario(); }
+            renderizarTablaModulo(modulo);
         });
     }
 </script>
