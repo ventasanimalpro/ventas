@@ -225,7 +225,8 @@
                         </div>
                         <div class="admin-form-group" style="flex:1; min-width: 150px;">
                             <label>Grupo / Categoría</label>
-                            <input type="text" id="prod-grupo" placeholder="Ej: Medicamentos">
+                            <input type="text" id="prod-grupo" class="autocomplete-input" placeholder="Ej: Medicamentos" autocomplete="off">
+                            <div id="autocomplete-list-grupos" class="autocomplete-items"></div>
                         </div>
                     </div>
                     <div style="display:flex; gap:10px; flex-wrap: wrap;">
@@ -255,7 +256,7 @@
                 </div>
 
                 <h4 style="border-bottom: 1px solid #ddd; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-                    <span>Lista de Productos Públicos</span>
+                    <span>Lista General de Productos (Catálogo e Inventario)</span>
                     <button class="btn-admin-action" style="width: auto; padding: 8px 15px; margin: 0; font-size: 0.9rem; background: var(--info);" onclick="abrirModalExcel('productos')">📥 Importar Excel</button>
                 </h4>
                 
@@ -265,8 +266,16 @@
                 </div>
 
                 <div class="table-responsive">
-                    <table class="admin-table">
-                        <thead><tr><th>Imagen</th><th>Nombre</th><th>Grupo</th><th class="text-right">Precio Venta</th><th class="text-right">Acción</th></tr></thead>
+                    <table class="admin-table" style="user-select: none;">
+                        <thead>
+                            <tr>
+                                <th>Imagen</th>
+                                <th onclick="ordenarProductos('nombre')" style="cursor:pointer;" title="Ordenar por Nombre">Nombre <span id="sort-icon-prod-nombre" style="font-size:0.8rem; margin-left:3px;">▲</span></th>
+                                <th onclick="ordenarProductos('grupo')" style="cursor:pointer;" title="Ordenar por Grupo">Grupo <span id="sort-icon-prod-grupo" style="font-size:0.8rem; margin-left:3px;"></span></th>
+                                <th onclick="ordenarProductos('precio')" style="cursor:pointer;" class="text-right" title="Ordenar por Precio">Precio Venta <span id="sort-icon-prod-precio" style="font-size:0.8rem; margin-left:3px;"></span></th>
+                                <th class="text-right">Acción</th>
+                            </tr>
+                        </thead>
                         <tbody id="tabla-productos-admin">
                             <tr><td colspan="5" style="text-align:center; color:gray;">Cargando catálogo...</td></tr>
                         </tbody>
@@ -359,10 +368,11 @@
                                 <th onclick="ordenarInventario('vencimiento')" style="cursor:pointer;" title="Ordenar por Vencimiento">Vencimiento <span id="sort-icon-vencimiento" style="font-size:0.8rem; margin-left:3px;"></span></th>
                                 <th onclick="ordenarInventario('stock')" style="cursor:pointer;" class="text-right" title="Ordenar por Stock">Stock Disponible <span id="sort-icon-stock" style="font-size:0.8rem; margin-left:3px;"></span></th>
                                 <th onclick="ordenarInventario('estado')" style="cursor:pointer;" title="Ordenar por Estado">Estado <span id="sort-icon-estado" style="font-size:0.8rem; margin-left:3px;"></span></th>
+                                <th style="text-align:center;">Acción</th>
                             </tr>
                         </thead>
                         <tbody id="tabla-inventario">
-                            <tr><td colspan="5" style="text-align:center; color:gray;">Cargando inventario...</td></tr>
+                            <tr><td colspan="6" style="text-align:center; color:gray;">Cargando inventario...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -864,7 +874,7 @@
     // Globales del Catálogo Público
     const WEB_APP_URL ="https://script.google.com/macros/s/AKfycbwpm8CKeqBRptJQfu47QhR27G65py60KKlP3b-OGqp4lwv9MFEpgpLV1yxgLLf5kx0/exec"; 
     let carrito = [];
-    let diasMinimosGlobal = 2;
+    let diasMinimosGlobal = 2; // Lo defines aquí y se usa localmente
     let productosGlobales = []; // Ahora se llenará desde Firebase
 
     // Globales de Firebase y Panel Admin
@@ -886,6 +896,20 @@
     let invSearchQuery = "";
     let invSortCol = "nombre";
     let invSortAsc = true;
+
+    // Variables de Ordenamiento para Mis Productos
+    let prodSortCol = "nombre";
+    let prodSortAsc = true;
+
+    window.ordenarProductos = function(columna) {
+        if (prodSortCol === columna) {
+            prodSortAsc = !prodSortAsc;
+        } else {
+            prodSortCol = columna;
+            prodSortAsc = true;
+        }
+        renderizarTablaModulo('productos');
+    };
 
     // --- INICIALIZACIÓN GENERAL ---
     window.onload = async function() {
@@ -945,6 +969,9 @@
                     configurarAutocompleteTerceros('persona-cotizaciones', 'autocomplete-list-persona-cotizaciones');
                     configurarAutocompleteTerceros('tercero-ingresos', 'autocomplete-list-tercero-ingresos');
                     configurarAutocompleteTerceros('tercero-egresos', 'autocomplete-list-tercero-egresos');
+                    
+                    // Inicializar Autocompletado de Grupos
+                    configurarAutocompleteGrupos();
 
                     // Render inicial dashboard por si acaso
                     setTimeout(() => window.renderizarDashboard(), 500);
@@ -960,28 +987,18 @@
             });
         } catch(e) { console.error("Error al iniciar Firebase:", e); }
 
-        // Mantenemos la lógica de Google Apps Script SÓLO para el mensaje de la empresa y días de entrega
-        try {
-            const res = await fetch(WEB_APP_URL + "?getData=1");
-            const data = await res.json();
-            
-            if(data.mensaje && data.mensaje.trim() !== "") {
-                document.getElementById('texto-aviso').innerText = data.mensaje;
-                document.getElementById('modal-aviso').style.display = 'flex';
-            }
+        // --- ELIMINADO EL FETCH A GOOGLE SHEETS PARA EL MENSAJE INICIAL ---
+        // Configuramos los días de recogida directamente en base a la variable local `diasMinimosGlobal`
+        const labelFecha = document.getElementById('label-fecha');
+        labelFecha.innerText = diasMinimosGlobal === 0 ? "¡Disponible para hoy mismo!:" : `Fecha para recoger (mínimo ${diasMinimosGlobal} día(s)):`;
 
-            diasMinimosGlobal = parseInt(data.dias) || 0;
-            const labelFecha = document.getElementById('label-fecha');
-            labelFecha.innerText = diasMinimosGlobal === 0 ? "¡Disponible para hoy mismo!:" : `Fecha para recoger (mínimo ${diasMinimosGlobal} día(s)):`;
-
-            const fechaInput = document.getElementById('fechaRecogida');
-            const hoy = new Date(); hoy.setDate(hoy.getDate() + diasMinimosGlobal);
-            const minDate = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
-            fechaInput.setAttribute('min', minDate); fechaInput.value = minDate;
-            
-        } catch (e) { 
-            console.log("No se pudo conectar al script para traer mensajes/días, pero el catálogo cargará desde Firebase de todos modos.");
-        }
+        const fechaInput = document.getElementById('fechaRecogida');
+        const hoy = new Date(); 
+        hoy.setDate(hoy.getDate() + diasMinimosGlobal);
+        const minDate = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+        
+        fechaInput.setAttribute('min', minDate); 
+        fechaInput.value = minDate;
     };
 
 
@@ -1157,7 +1174,10 @@
             total += datos.subtotal; resumen += `- ${datos.cantidad}x ${nombre} ($${datos.subtotal.toLocaleString()})\n`; itemsSheets.push(`${datos.cantidad}x ${nombre}`);
         }
         const msj = `*NUEVO PEDIDO* 🐷\n\n*Cliente:* ${n}\n*WhatsApp:* ${t}\n*Fecha Recogida:* ${f}\n*Pago:* ${p}\n\n*PRODUCTOS:* \n${resumen}\n*TOTAL: $${total.toLocaleString()}*`;
+        
+        // Mantenemos esta única petición a Google Sheets para que guarde los pedidos
         fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ tipo: "PEDIDO", nombre: n, telefono: t, fecha: f, pago: p, items: itemsSheets.join(" / ") }) }).catch(e => console.log(e));
+        
         window.location.href = `https://wa.me/573012324030?text=${encodeURIComponent(msj)}`;
     }
 
@@ -1413,6 +1433,21 @@
             await deleteDoc(doc(db, 'productos_catalogo', id));
         } catch (e) { alert("Error eliminando producto."); }
     }
+    
+    // Función nueva para enviar un producto del inventario directo a crearse en el catálogo
+    window.prepararNuevoProducto = function(nombre) {
+        // Encontrar la pestaña de Mis Productos y activarla
+        const tabs = Array.from(document.querySelectorAll('.admin-tab'));
+        const tabProductos = tabs.find(t => t.textContent.includes('Mis Productos'));
+        if(tabProductos) cambiarModulo('productos', tabProductos);
+        
+        cancelarEdicionProducto(); // Limpiar el formulario
+        document.getElementById('prod-nombre').value = nombre;
+        document.getElementById('mod-productos').scrollIntoView({ behavior: 'smooth' });
+        
+        // Enfocar el precio para que el usuario recuerde que es el campo más importante
+        setTimeout(() => document.getElementById('prod-precio').focus(), 300);
+    };
 
     // Funciones Autocompletar Estándar para Productos (En Ventas, Compras...)
     function getKnownProducts() {
@@ -1434,12 +1469,14 @@
             });
         });
 
-        // 3. Inventario general (compras) por si nunca se ha vendido ni está en el catálogo
-        calcularInventarioGlobal().forEach(i => {
-            let key = i.nombre.trim().toLowerCase();
-            if (!known.has(key)) {
-                known.set(key, { nombre: i.nombre, precio: 0 });
-            }
+        // 3. Historial de Compras (Asegura que TODO lo comprado aparezca en los autocompletados y sugerencias)
+        (window.adminRecordsCache.compras || []).forEach(compra => {
+            (compra.items || []).forEach(item => {
+                let key = item.nombre.trim().toLowerCase();
+                if (!known.has(key)) {
+                    known.set(key, { nombre: item.nombre, precio: 0 });
+                }
+            });
         });
         
         return Array.from(known.values());
@@ -1473,7 +1510,38 @@
         const tbody = document.getElementById(modulo === 'productos' ? 'tabla-productos-admin' : (modulo === 'terceros' ? 'tabla-terceros' : `tabla-${modulo}`));
         if(!tbody) return;
         
-        let registros = modulo === 'productos' ? [...productosGlobales] : [...(window.adminRecordsCache[modulo] || [])];
+        let registros = [];
+        
+        if (modulo === 'productos') {
+            let mergedProducts = [];
+            let knownNames = new Set();
+            
+            // 1. Agregar productos que ya están en el catálogo público
+            productosGlobales.forEach(p => {
+                mergedProducts.push({ ...p, isPublished: true });
+                knownNames.add(p.nombre.trim().toLowerCase());
+            });
+            
+            // 2. Buscar en el historial e inventario los que faltan por publicar
+            getKnownProducts().forEach(kp => {
+                let normName = kp.nombre.trim().toLowerCase();
+                if (!knownNames.has(normName)) {
+                     mergedProducts.push({
+                        id: 'temp_' + normName,
+                        nombre: kp.nombre,
+                        grupo: 'NO PUBLICADO',
+                        precio: kp.precio || 0,
+                        imagen: '',
+                        isPublished: false
+                    });
+                    knownNames.add(normName);
+                }
+            });
+            registros = mergedProducts;
+        } else {
+            registros = [...(window.adminRecordsCache[modulo] || [])];
+        }
+        
         const query = window.adminSearchQueries[modulo] || "";
 
         // Aplicar filtro de búsqueda si existe
@@ -1496,8 +1564,31 @@
             });
         }
 
-        // Ordenar: Alfabético para productos/terceros, cronológico inverso para el resto
-        if (modulo === 'productos' || modulo === 'terceros') {
+        // Ordenar
+        if (modulo === 'productos') {
+            registros.sort((a, b) => {
+                let valA = a[prodSortCol];
+                let valB = b[prodSortCol];
+                
+                if (prodSortCol === 'precio') {
+                    valA = parseFloat(valA) || 0;
+                    valB = parseFloat(valB) || 0;
+                    return prodSortAsc ? valA - valB : valB - valA;
+                } else {
+                    if (valA === null || valA === undefined) valA = '';
+                    if (valB === null || valB === undefined) valB = '';
+                    return prodSortAsc ? valA.toString().localeCompare(valB.toString()) : valB.toString().localeCompare(valA.toString());
+                }
+            });
+            
+            // Actualizar iconos de ordenamiento (se usa setTimeout para asegurar que el DOM existía)
+            setTimeout(() => {
+                ['nombre', 'grupo', 'precio'].forEach(col => {
+                    const el = document.getElementById(`sort-icon-prod-${col}`);
+                    if (el) el.innerHTML = (prodSortCol === col) ? (prodSortAsc ? "▲" : "▼") : "";
+                });
+            }, 0);
+        } else if (modulo === 'terceros') {
             registros.sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
         } else {
             registros.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -1513,7 +1604,13 @@
             let tr = document.createElement('tr');
             if (modulo === 'productos') {
                 let img = r.imagen && r.imagen.trim() !== "" ? `<img src="${r.imagen}" style="width:40px; height:40px; object-fit:cover; border-radius:5px;">` : '🖼️';
-                tr.innerHTML = `<td>${img}</td><td><strong>${r.nombre}</strong></td><td><span style="background:#eee; padding:3px 8px; border-radius:5px; font-size:0.8rem;">${r.grupo || 'GENERAL'}</span></td><td class="text-right" style="color:var(--accent); font-weight:bold;">$${parseInt(r.precio || 0).toLocaleString()}</td><td class="text-right"><button class="btn-table-action" title="Editar" onclick="editarProductoCatalogo('${r.id}')">✏️</button><button class="btn-table-action" style="color:red;" title="Borrar" onclick="borrarProductoCatalogo('${r.id}')">✖</button></td>`;
+                
+                if (r.isPublished) {
+                    tr.innerHTML = `<td>${img}</td><td><strong>${r.nombre}</strong> <span style="color:var(--primary); font-size:0.75rem; font-weight:bold; margin-left:5px;">(Público)</span></td><td><span style="background:#eee; padding:3px 8px; border-radius:5px; font-size:0.8rem;">${r.grupo || 'GENERAL'}</span></td><td class="text-right" style="color:var(--accent); font-weight:bold;">$${parseInt(r.precio || 0).toLocaleString()}</td><td class="text-right"><button class="btn-table-action" title="Editar" onclick="editarProductoCatalogo('${r.id}')">✏️</button><button class="btn-table-action" style="color:red;" title="Borrar" onclick="borrarProductoCatalogo('${r.id}')">✖</button></td>`;
+                } else {
+                    tr.style.background = "#fff8e1"; // Color distintivo para productos no publicados
+                    tr.innerHTML = `<td>${img}</td><td><strong>${r.nombre}</strong> <span style="color:var(--warning); font-size:0.75rem; font-weight:bold; margin-left:5px;">(Oculto)</span></td><td><span style="background:#ffe0b2; color:#e65100; padding:3px 8px; border-radius:5px; font-size:0.8rem; font-weight:bold;">${r.grupo}</span></td><td class="text-right" style="color:gray;">$${parseInt(r.precio || 0).toLocaleString()}</td><td class="text-right"><button class="btn-table-action" style="background:var(--primary); color:white; padding:4px 8px; border-radius:5px; font-size:0.85rem; font-weight:bold; cursor:pointer;" onclick="prepararNuevoProducto('${r.nombre}')" title="Crear en el Catálogo">➕ Publicar</button></td>`;
+                }
             } else if (modulo === 'terceros') {
                 tr.innerHTML = `<td><strong>${r.nombre}</strong></td><td>${r.documento || '-'}</td><td>${r.telefono || '-'}</td><td class="text-right"><button class="btn-table-action" style="color:red;" onclick="borrarRegistro('${modulo}', '${r.id}')" title="Borrar">✖</button></td>`;
             } else if (modulo === 'ingresos') {
@@ -1529,6 +1626,64 @@
             tbody.appendChild(tr);
         });
     };
+
+    function configurarAutocompleteGrupos() {
+        const input = document.getElementById('prod-grupo');
+        const listContainer = document.getElementById('autocomplete-list-grupos');
+        if(!input || !listContainer) return;
+        
+        input.addEventListener("input", function(e) {
+            let val = this.value.trim(); 
+            listContainer.innerHTML = ""; 
+            if (!val) return false; 
+            
+            // Recolectar nombres de grupos únicos que ya existen en el catálogo
+            let knownGroups = new Set();
+            productosGlobales.forEach(p => {
+                if(p.grupo && p.grupo.trim() !== "") knownGroups.add(p.grupo.trim());
+            });
+            let groupsArray = Array.from(knownGroups);
+
+            let matches = groupsArray.filter(g => g.toLowerCase().includes(val.toLowerCase()));
+            let matchExacto = false;
+
+            matches.forEach(g => {
+                let divItem = document.createElement("div");
+                divItem.innerHTML = `<span><strong>${g}</strong></span>`;
+                if(g.toLowerCase() === val.toLowerCase()) matchExacto = true;
+                
+                divItem.addEventListener("mousedown", function(evt) {
+                    evt.preventDefault(); 
+                    input.value = g; 
+                    listContainer.innerHTML = "";
+                    input.blur();
+                });
+                listContainer.appendChild(divItem);
+            });
+
+            // Si lo que escribió no es un grupo existente, sugerimos crearlo
+            if (!matchExacto) {
+                let divAdd = document.createElement("div");
+                divAdd.style.backgroundColor = "#e8f5e9";
+                divAdd.innerHTML = `<span style="color:var(--primary); font-weight:bold;">➕ Crear grupo: "${val}"</span>`;
+                
+                divAdd.addEventListener("mousedown", function(evt) {
+                    evt.preventDefault();
+                    input.value = val;
+                    listContainer.innerHTML = "";
+                    input.blur();
+                });
+                listContainer.appendChild(divAdd);
+            }
+        });
+
+        // Ocultar lista al quitar el cursor
+        input.addEventListener("blur", function() {
+            setTimeout(() => {
+                listContainer.innerHTML = "";
+            }, 150);
+        });
+    }
 
     function configurarAutocomplete(modulo) {
         const input = document.getElementById(`busqueda-prod-${modulo}`);
@@ -1864,7 +2019,7 @@
         });
 
         if(inventario.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:gray;">${invSearchQuery ? 'No se encontraron resultados.' : 'No hay registros.'}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:gray;">${invSearchQuery ? 'No se encontraron resultados.' : 'No hay registros.'}</td></tr>`;
         } else {
             inventario.forEach(item => {
                 let estadoHtml = "";
@@ -1883,8 +2038,14 @@
                         estadoHtml = `<span class="badge-status bg-success">Normal</span>`;
                     }
                 }
+                
+                // NUEVO: Detectar si el producto de la tabla ya está en tu catálogo público o no
+                let estaEnCatalogo = productosGlobales.some(p => p.nombre.trim().toLowerCase() === item.nombre.trim().toLowerCase());
+                let actionHtml = estaEnCatalogo 
+                    ? `<span style="color:var(--primary); font-size:0.8rem; font-weight:bold;">✔️ En catálogo</span>` 
+                    : `<button class="btn-table-action" style="background:var(--primary); color:white; padding:4px 8px; border-radius:5px; font-size:0.85rem; font-weight:bold; cursor:pointer;" onclick="prepararNuevoProducto('${item.nombre}')" title="Crear en el Catálogo">➕ Publicar</button>`;
 
-                tbody.innerHTML += `<tr style="${colorFila}"><td><strong>${item.nombre}</strong></td><td>${item.lote}</td><td>${item.vencimiento}</td><td class="text-right" style="font-size:1.1rem; font-weight:bold;">${item.stock}</td><td>${estadoHtml}</td></tr>`;
+                tbody.innerHTML += `<tr style="${colorFila}"><td><strong>${item.nombre}</strong></td><td>${item.lote}</td><td>${item.vencimiento}</td><td class="text-right" style="font-size:1.1rem; font-weight:bold;">${item.stock}</td><td>${estadoHtml}</td><td style="text-align:center;">${actionHtml}</td></tr>`;
             });
         }
 
@@ -2151,7 +2312,11 @@
         return onSnapshot(collection(db, 'artifacts', appId, 'users', userId, modulo), (snapshot) => {
             let regs = []; snapshot.forEach(doc => { regs.push({ id: doc.id, ...doc.data() }); });
             window.adminRecordsCache[modulo] = regs;
-            if (modulo === 'ventas' || modulo === 'compras') { window.modulosCargados[modulo] = true; renderizarInventario(); }
+            if (modulo === 'ventas' || modulo === 'compras') { 
+                window.modulosCargados[modulo] = true; 
+                renderizarInventario(); 
+                renderizarTablaModulo('productos'); // ESTO ES CLAVE: Actualiza la tabla de productos ocultos al cargar compras
+            }
             renderizarTablaModulo(modulo);
         });
     }
