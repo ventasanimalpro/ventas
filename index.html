@@ -1217,8 +1217,27 @@
 
         drawHeadFoot(pageNum);
 
-        for (let i = 0; i < productosGlobales.length; i++) {
-            const p = productosGlobales[i];
+        // --- NUEVA LÓGICA DE ORDENAMIENTO ---
+        // Ordenar copia de productos por Grupo y luego por Nombre
+        let productosOrdenadosPDF = [...productosGlobales].sort((a, b) => {
+            let grupoA = (a.grupo || "GENERAL").trim().toUpperCase();
+            let grupoB = (b.grupo || "GENERAL").trim().toUpperCase();
+            
+            // 1. Ordenar por Grupo
+            if (grupoA < grupoB) return -1;
+            if (grupoA > grupoB) return 1;
+            
+            // 2. Si son del mismo grupo, ordenar alfabéticamente por Nombre
+            let nombreA = (a.nombre || "").trim().toUpperCase();
+            let nombreB = (b.nombre || "").trim().toUpperCase();
+            
+            if (nombreA < nombreB) return -1;
+            if (nombreA > nombreB) return 1;
+            return 0;
+        });
+
+        for (let i = 0; i < productosOrdenadosPDF.length; i++) {
+            const p = productosOrdenadosPDF[i];
             
             // EXACTAMENTE 3 POR PÁGINA
             if (itemsOnPage === 3) { 
