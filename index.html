@@ -198,7 +198,6 @@
         <div class="admin-sidebar">
             <button class="admin-tab" onclick="cambiarModulo('dashboard', this)">📈 Dashboard</button>
             <button class="admin-tab" onclick="cambiarModulo('terceros', this)">👥 Terceros</button>
-            <!-- NUEVO: Pestaña Productos -->
             <button class="admin-tab" onclick="cambiarModulo('productos', this)">📦 Mis Productos</button>
             <button class="admin-tab" onclick="cambiarModulo('inventario', this)">📊 Inventario</button>
             <button class="admin-tab active" onclick="cambiarModulo('ventas', this)">🛒 Ventas</button>
@@ -864,6 +863,23 @@
     </div>
 </div>
 
+<!-- MODAL PREVISUALIZAR TRANSACCIÓN -->
+<div id="modal-preview" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
+            <h2 style="margin:0; color: var(--accent); font-size: 1.3rem;">📄 Vista Previa</h2>
+            <button style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#888;" onclick="cerrarModalPreview()">✖</button>
+        </div>
+        <div id="preview-body" style="background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px dashed #ccc; font-size: 0.95rem; max-height: 50vh; overflow-y: auto;">
+            <!-- Contenido dinámico generado por JS -->
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn-admin-action" id="btn-print-preview" style="background: var(--primary); flex: 2; margin-top: 0;" onclick="">🖨️ Imprimir PDF</button>
+            <button class="btn-admin-action" style="background: #9e9e9e; flex: 1; margin-top: 0;" onclick="cerrarModalPreview()">Cerrar</button>
+        </div>
+    </div>
+</div>
+
 <!-- LÓGICA PRINCIPAL (CON FIREBASE IMPORTADO) -->
 <script type="module">
     // Firebase Imports
@@ -987,8 +1003,6 @@
             });
         } catch(e) { console.error("Error al iniciar Firebase:", e); }
 
-        // --- ELIMINADO EL FETCH A GOOGLE SHEETS PARA EL MENSAJE INICIAL ---
-        // Configuramos los días de recogida directamente en base a la variable local `diasMinimosGlobal`
         const labelFecha = document.getElementById('label-fecha');
         labelFecha.innerText = diasMinimosGlobal === 0 ? "¡Disponible para hoy mismo!:" : `Fecha para recoger (mínimo ${diasMinimosGlobal} día(s)):`;
 
@@ -1175,7 +1189,6 @@
         }
         const msj = `*NUEVO PEDIDO* 🐷\n\n*Cliente:* ${n}\n*WhatsApp:* ${t}\n*Fecha Recogida:* ${f}\n*Pago:* ${p}\n\n*PRODUCTOS:* \n${resumen}\n*TOTAL: $${total.toLocaleString()}*`;
         
-        // Mantenemos esta única petición a Google Sheets para que guarde los pedidos
         fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ tipo: "PEDIDO", nombre: n, telefono: t, fecha: f, pago: p, items: itemsSheets.join(" / ") }) }).catch(e => console.log(e));
         
         window.location.href = `https://wa.me/573012324030?text=${encodeURIComponent(msj)}`;
@@ -1266,7 +1279,6 @@
         const ctx = document.getElementById('chartRotacion');
         if(!ctx) return;
 
-        // Agrupar ventas históricas por producto
         let ventasPorProducto = {};
         (window.adminRecordsCache.ventas || []).forEach(venta => {
             (venta.items || []).forEach(item => {
@@ -1276,25 +1288,19 @@
             });
         });
 
-        // Convertir el objeto a un arreglo para poder ordenarlo
         let productosArray = Object.keys(ventasPorProducto).map(nombre => {
             return { nombre: nombre, cant: ventasPorProducto[nombre] };
         });
         
-        // Ordenar de mayor a menor cantidad vendida
         productosArray.sort((a, b) => b.cant - a.cant);
-
-        // Tomar solamente el Top 10
         let top10 = productosArray.slice(0, 10);
         let labels = top10.map(p => p.nombre);
         let data = top10.map(p => p.cant);
 
-        // Destruir la gráfica anterior si existe para evitar superposiciones
         if(rotacionChart) {
             rotacionChart.destroy();
         }
 
-        // Crear la nueva gráfica
         rotacionChart = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -1302,8 +1308,8 @@
                 datasets: [{
                     label: 'Unidades Vendidas Históricamente',
                     data: data,
-                    backgroundColor: 'rgba(37, 211, 102, 0.7)', // Verde primario con opacidad
-                    borderColor: 'rgba(27, 94, 32, 1)', // Verde oscuro
+                    backgroundColor: 'rgba(37, 211, 102, 0.7)', 
+                    borderColor: 'rgba(27, 94, 32, 1)', 
                     borderWidth: 1,
                     borderRadius: 5
                 }]
@@ -1314,7 +1320,7 @@
                 scales: {
                     y: { 
                         beginAtZero: true,
-                        ticks: { stepSize: 1 } // Para que muestre números enteros
+                        ticks: { stepSize: 1 } 
                     }
                 },
                 plugins: {
@@ -1341,10 +1347,42 @@
             document.getElementById('prod-img-preview').innerHTML = '';
             return;
         }
+        
         const reader = new FileReader();
         reader.onload = function(event) {
-            document.getElementById('prod-img-base64').value = event.target.result;
-            document.getElementById('prod-img-preview').innerHTML = `<img src="${event.target.result}" style="max-height:80px; border-radius:5px; border: 1px solid #ddd; padding: 2px; background: white;">`;
+            // Creamos un Image object para redimensionar y comprimir y no sobrepasar el límite de 1MB de Firebase
+            const img = new Image();
+            img.onload = function() {
+                const MAX_WIDTH = 600;
+                const MAX_HEIGHT = 600;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Comprimimos a JPEG (calidad 70%) para que pase holgadamente sin errores
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                
+                document.getElementById('prod-img-base64').value = dataUrl;
+                document.getElementById('prod-img-preview').innerHTML = `<img src="${dataUrl}" style="max-height:80px; border-radius:5px; border: 1px solid #ddd; padding: 2px; background: white;">`;
+            };
+            img.src = event.target.result;
         };
         reader.readAsDataURL(file);
     }
@@ -1352,19 +1390,34 @@
     window.guardarProductoCatalogo = async function() {
         if(!userId) return alert("Error de autenticación.");
         
-        const nombre = document.getElementById('prod-nombre').value.trim();
-        const grupo = document.getElementById('prod-grupo').value.trim() || 'GENERAL';
-        const precio = parseFloat(document.getElementById('prod-precio').value) || 0;
-        const precioOriginal = parseFloat(document.getElementById('prod-precio-orig').value) || "";
-        const descripcion = document.getElementById('prod-desc').value.trim();
-        const imagen = document.getElementById('prod-img-base64').value.trim(); // Ahora toma el código Base64
+        // Extracción segura (previene Undefineds)
+        const nombre = (document.getElementById('prod-nombre').value || "").trim();
+        const grupo = (document.getElementById('prod-grupo').value || "").trim() || 'GENERAL';
+        
+        // Parsear números de forma defensiva para evitar NaNs en Firestore
+        const precioRaw = parseFloat(document.getElementById('prod-precio').value);
+        const precio = isNaN(precioRaw) ? 0 : precioRaw;
+        
+        const precioOrigRaw = parseFloat(document.getElementById('prod-precio-orig').value);
+        const precioOriginal = isNaN(precioOrigRaw) ? "" : precioOrigRaw;
+        
+        const descripcion = (document.getElementById('prod-desc').value || "").trim();
+        const imagen = (document.getElementById('prod-img-base64').value || "").trim();
 
         if(!nombre || precio <= 0) return alert("Por favor ingresa al menos el Nombre y un Precio Venta válido.");
 
         const btn = document.getElementById('btn-guardar-prod');
         btn.disabled = true; btn.innerText = "⏳ Guardando...";
 
-        const prodData = { nombre, grupo, precio, precioOriginal, descripcion, imagen, updatedAt: Date.now() };
+        const prodData = { 
+            nombre: nombre, 
+            grupo: grupo, 
+            precio: precio, 
+            precioOriginal: precioOriginal, 
+            descripcion: descripcion, 
+            imagen: imagen, 
+            updatedAt: Date.now() 
+        };
 
         try {
             if (prodEditId) {
@@ -1376,7 +1429,8 @@
             alert("Producto guardado correctamente en tu catálogo.");
             cancelarEdicionProducto();
         } catch (e) {
-            console.error(e); alert("Error al guardar. Revisa tus permisos en Firebase.");
+            console.error(e); 
+            alert("Error al guardar en base de datos. Revisa tus permisos de Firebase.");
         } finally {
             btn.disabled = false; btn.innerText = "💾 Guardar Producto";
         }
@@ -1394,9 +1448,8 @@
         document.getElementById('prod-desc').value = prod.descripcion || '';
         
         document.getElementById('prod-img-base64').value = prod.imagen || '';
-        document.getElementById('prod-img-file').value = ''; // Limpiamos el input de archivo
+        document.getElementById('prod-img-file').value = ''; 
         
-        // Mostrar la vista previa si ya tiene imagen guardada
         if (prod.imagen && prod.imagen.trim() !== "") {
             document.getElementById('prod-img-preview').innerHTML = `<img src="${prod.imagen}" style="max-height:80px; border-radius:5px; border: 1px solid #ddd; padding: 2px; background: white;">`;
         } else {
@@ -1428,6 +1481,28 @@
     }
 
     window.borrarProductoCatalogo = async function(id) {
+        const prod = productosGlobales.find(p => p.id === id);
+        if (!prod) return alert("No se encontró el producto.");
+
+        // NUEVA RESTRICCIÓN: Verificar si el producto tiene movimientos antes de permitir el borrado
+        let tieneMovimientos = false;
+        const nombreProd = prod.nombre.trim().toLowerCase();
+        
+        const checkMovimientos = (modulo) => {
+            return (window.adminRecordsCache[modulo] || []).some(record => 
+                (record.items || []).some(item => item.nombre.trim().toLowerCase() === nombreProd)
+            );
+        };
+
+        // Verificamos en las transacciones principales
+        if (checkMovimientos('ventas') || checkMovimientos('compras') || checkMovimientos('cotizaciones')) {
+            tieneMovimientos = true;
+        }
+
+        if (tieneMovimientos) {
+            return alert(`⛔ ACCIÓN DENEGADA:\n\nNo puedes borrar el producto "${prod.nombre}" porque ya tiene movimientos (compras, ventas o cotizaciones) registrados en el historial de tu sistema.\n\nPara garantizar la integridad de tus finanzas e inventario, los productos con actividad no pueden ser eliminados.`);
+        }
+
         if(!confirm("¿Seguro que quieres eliminar este producto del catálogo público? (Tu inventario histórico no se borrará)")) return;
         try {
             await deleteDoc(doc(db, 'productos_catalogo', id));
@@ -1442,34 +1517,38 @@
         if(tabProductos) cambiarModulo('productos', tabProductos);
         
         cancelarEdicionProducto(); // Limpiar el formulario
-        document.getElementById('prod-nombre').value = nombre;
+        
+        const nombreReal = nombre.replace(/&quot;/g, '"');
+        document.getElementById('prod-nombre').value = nombreReal;
+
+        // Buscar si ya tenemos un precio conocido en el inventario o ventas y autollenarlo
+        let knownProducts = getKnownProducts();
+        let kp = knownProducts.find(p => p.nombre.trim().toLowerCase() === nombreReal.trim().toLowerCase());
+        if (kp && kp.precio > 0) {
+             document.getElementById('prod-precio').value = kp.precio;
+        }
+
         document.getElementById('mod-productos').scrollIntoView({ behavior: 'smooth' });
         
-        // Enfocar el precio para que el usuario recuerde que es el campo más importante
         setTimeout(() => document.getElementById('prod-precio').focus(), 300);
     };
 
-    // Funciones Autocompletar Estándar para Productos (En Ventas, Compras...)
     function getKnownProducts() {
         let known = new Map();
         
-        // 1. Productos del catálogo público (Firebase)
         productosGlobales.forEach(p => {
             known.set(p.nombre.trim().toLowerCase(), { nombre: p.nombre, precio: parseInt(p.precio) || 0 });
         });
         
-        // 2. Historial de Ventas (Para recordar el último precio de venta de productos que NO están en el catálogo público)
         (window.adminRecordsCache.ventas || []).forEach(venta => {
             (venta.items || []).forEach(item => {
                 let key = item.nombre.trim().toLowerCase();
-                // Si no está en el catálogo, o si su precio es 0, tomamos el precio de su última venta registrada
                 if (!known.has(key) || known.get(key).precio === 0) {
                     known.set(key, { nombre: item.nombre, precio: parseInt(item.precio) || 0 });
                 }
             });
         });
 
-        // 3. Historial de Compras (Asegura que TODO lo comprado aparezca en los autocompletados y sugerencias)
         (window.adminRecordsCache.compras || []).forEach(compra => {
             (compra.items || []).forEach(item => {
                 let key = item.nombre.trim().toLowerCase();
@@ -1482,30 +1561,23 @@
         return Array.from(known.values());
     }
 
-    // Función auxiliar para limpiar números provenientes de Excel (elimina $, puntos de miles, etc.)
     function limpiarNumero(val) {
         if (typeof val === 'number') return val;
         if (!val) return 0;
-        // Eliminar todo lo que no sea número o coma/punto decimal
         let clean = val.toString().replace(/[^0-9.,-]/g, '');
-        // Si hay puntos y comas, asumimos formato regional. 
-        // Para simplificar, eliminamos los puntos (miles) y reemplazamos coma por punto (decimal).
         if (clean.includes(',') && clean.includes('.')) {
             clean = clean.replace(/\./g, '').replace(/,/g, '.');
         } else if (clean.includes(',')) {
-            // Si solo tiene comas, vemos si actúa como decimal o miles (asumimos decimal para montos pequeños o miles para grandes)
             clean = clean.replace(/,/g, '.');
         }
         return parseFloat(clean) || 0;
     }
 
-    // Función para manejar el filtrado local de las tablas administrativas
     window.filtrarTablaAdmin = function(modulo, query) {
         window.adminSearchQueries[modulo] = query.toLowerCase();
         renderizarTablaModulo(modulo);
     };
 
-    // Función unificada para renderizar las tablas del historial con soporte para búsqueda
     window.renderizarTablaModulo = function(modulo) {
         const tbody = document.getElementById(modulo === 'productos' ? 'tabla-productos-admin' : (modulo === 'terceros' ? 'tabla-terceros' : `tabla-${modulo}`));
         if(!tbody) return;
@@ -1516,13 +1588,11 @@
             let mergedProducts = [];
             let knownNames = new Set();
             
-            // 1. Agregar productos que ya están en el catálogo público
             productosGlobales.forEach(p => {
                 mergedProducts.push({ ...p, isPublished: true });
                 knownNames.add(p.nombre.trim().toLowerCase());
             });
             
-            // 2. Buscar en el historial e inventario los que faltan por publicar
             getKnownProducts().forEach(kp => {
                 let normName = kp.nombre.trim().toLowerCase();
                 if (!knownNames.has(normName)) {
@@ -1544,7 +1614,6 @@
         
         const query = window.adminSearchQueries[modulo] || "";
 
-        // Aplicar filtro de búsqueda si existe
         if (query) {
             registros = registros.filter(r => {
                 if (modulo === 'productos') {
@@ -1564,7 +1633,6 @@
             });
         }
 
-        // Ordenar
         if (modulo === 'productos') {
             registros.sort((a, b) => {
                 let valA = a[prodSortCol];
@@ -1581,7 +1649,6 @@
                 }
             });
             
-            // Actualizar iconos de ordenamiento (se usa setTimeout para asegurar que el DOM existía)
             setTimeout(() => {
                 ['nombre', 'grupo', 'precio'].forEach(col => {
                     const el = document.getElementById(`sort-icon-prod-${col}`);
@@ -1608,8 +1675,10 @@
                 if (r.isPublished) {
                     tr.innerHTML = `<td>${img}</td><td><strong>${r.nombre}</strong> <span style="color:var(--primary); font-size:0.75rem; font-weight:bold; margin-left:5px;">(Público)</span></td><td><span style="background:#eee; padding:3px 8px; border-radius:5px; font-size:0.8rem;">${r.grupo || 'GENERAL'}</span></td><td class="text-right" style="color:var(--accent); font-weight:bold;">$${parseInt(r.precio || 0).toLocaleString()}</td><td class="text-right"><button class="btn-table-action" title="Editar" onclick="editarProductoCatalogo('${r.id}')">✏️</button><button class="btn-table-action" style="color:red;" title="Borrar" onclick="borrarProductoCatalogo('${r.id}')">✖</button></td>`;
                 } else {
-                    tr.style.background = "#fff8e1"; // Color distintivo para productos no publicados
-                    tr.innerHTML = `<td>${img}</td><td><strong>${r.nombre}</strong> <span style="color:var(--warning); font-size:0.75rem; font-weight:bold; margin-left:5px;">(Oculto)</span></td><td><span style="background:#ffe0b2; color:#e65100; padding:3px 8px; border-radius:5px; font-size:0.8rem; font-weight:bold;">${r.grupo}</span></td><td class="text-right" style="color:gray;">$${parseInt(r.precio || 0).toLocaleString()}</td><td class="text-right"><button class="btn-table-action" style="background:var(--primary); color:white; padding:4px 8px; border-radius:5px; font-size:0.85rem; font-weight:bold; cursor:pointer;" onclick="prepararNuevoProducto('${r.nombre}')" title="Crear en el Catálogo">➕ Publicar</button></td>`;
+                    // Usando un atributo custom evita fallos si el nombre contiene comillas que rompan el HTML del onclick
+                    let nombreAtributo = r.nombre.replace(/"/g, '&quot;');
+                    tr.style.background = "#fff8e1"; 
+                    tr.innerHTML = `<td>${img}</td><td><strong>${r.nombre}</strong> <span style="color:var(--warning); font-size:0.75rem; font-weight:bold; margin-left:5px;">(Oculto)</span></td><td><span style="background:#ffe0b2; color:#e65100; padding:3px 8px; border-radius:5px; font-size:0.8rem; font-weight:bold;">${r.grupo}</span></td><td class="text-right" style="color:gray;">$${parseInt(r.precio || 0).toLocaleString()}</td><td class="text-right"><button class="btn-table-action" style="background:var(--primary); color:white; padding:4px 8px; border-radius:5px; font-size:0.85rem; font-weight:bold; cursor:pointer;" onclick="prepararNuevoProducto(this.getAttribute('data-nombre'))" data-nombre="${nombreAtributo}" title="Crear en el Catálogo">➕ Publicar</button></td>`;
                 }
             } else if (modulo === 'terceros') {
                 tr.innerHTML = `<td><strong>${r.nombre}</strong></td><td>${r.documento || '-'}</td><td>${r.telefono || '-'}</td><td class="text-right"><button class="btn-table-action" style="color:red;" onclick="borrarRegistro('${modulo}', '${r.id}')" title="Borrar">✖</button></td>`;
@@ -1621,7 +1690,7 @@
                 tr.innerHTML = `<td>${r.fecha}</td><td><b>${r.numeroDoc || '-'}</b></td><td><strong>${r.tercero}</strong></td><td>${r.concepto}</td><td><span style="background:#eee; padding:3px 8px; border-radius:5px; font-size:0.8rem;">${r.tipo || '-'}</span></td><td><span style="background:#e3f2fd; color:#1565c0; padding:3px 8px; border-radius:5px; font-size:0.8rem; font-weight:bold;">${pagoLabel}</span></td><td class="text-right" style="color: red; font-weight:bold;">$${r.total.toLocaleString()}</td><td class="text-right"><button class="btn-table-action" style="color:red;" onclick="borrarRegistro('${modulo}', '${r.id}')" title="Borrar">✖</button></td>`;
             } else {
                 let cantItems = r.items ? r.items.length : 0;
-                tr.innerHTML = `<td>${r.fecha}</td><td><b>${r.numeroDoc || '-'}</b></td><td><strong>${r.persona}</strong></td><td>${cantItems} ítems</td><td class="text-right">$${(r.impuestoValor || 0).toLocaleString(undefined, {maximumFractionDigits:2})}</td><td class="text-right" style="font-weight:bold; color:var(--accent);">$${(r.totalFinal || r.total || 0).toLocaleString(undefined, {maximumFractionDigits:2})}</td><td class="text-right"><button class="btn-table-action" title="Editar" onclick="editarRegistroAdmin('${modulo}', '${r.id}')">✏️</button><button class="btn-table-action" title="Imprimir PDF" onclick="imprimirRegistroAdmin('${modulo}', '${r.id}')">🖨️</button><button class="btn-table-action" style="color:red;" title="Borrar" onclick="borrarRegistro('${modulo}', '${r.id}')">✖</button></td>`;
+                tr.innerHTML = `<td>${r.fecha}</td><td><b>${r.numeroDoc || '-'}</b></td><td><strong>${r.persona}</strong></td><td>${cantItems} ítems</td><td class="text-right">$${(r.impuestoValor || 0).toLocaleString(undefined, {maximumFractionDigits:2})}</td><td class="text-right" style="font-weight:bold; color:var(--accent);">$${(r.totalFinal || r.total || 0).toLocaleString(undefined, {maximumFractionDigits:2})}</td><td class="text-right"><button class="btn-table-action" title="Ver detalle" onclick="previsualizarRegistroAdmin('${modulo}', '${r.id}')">👁️</button><button class="btn-table-action" title="Editar" onclick="editarRegistroAdmin('${modulo}', '${r.id}')">✏️</button><button class="btn-table-action" title="Imprimir PDF" onclick="imprimirRegistroAdmin('${modulo}', '${r.id}')">🖨️</button><button class="btn-table-action" style="color:red;" title="Borrar" onclick="borrarRegistro('${modulo}', '${r.id}')">✖</button></td>`;
             }
             tbody.appendChild(tr);
         });
@@ -1637,7 +1706,6 @@
             listContainer.innerHTML = ""; 
             if (!val) return false; 
             
-            // Recolectar nombres de grupos únicos que ya existen en el catálogo
             let knownGroups = new Set();
             productosGlobales.forEach(p => {
                 if(p.grupo && p.grupo.trim() !== "") knownGroups.add(p.grupo.trim());
@@ -1661,7 +1729,6 @@
                 listContainer.appendChild(divItem);
             });
 
-            // Si lo que escribió no es un grupo existente, sugerimos crearlo
             if (!matchExacto) {
                 let divAdd = document.createElement("div");
                 divAdd.style.backgroundColor = "#e8f5e9";
@@ -1677,7 +1744,6 @@
             }
         });
 
-        // Ocultar lista al quitar el cursor
         input.addEventListener("blur", function() {
             setTimeout(() => {
                 listContainer.innerHTML = "";
@@ -1701,7 +1767,6 @@
             
             let knownProducts = getKnownProducts();
             
-            // Búsqueda inteligente por fragmentos (Ej: "aqua 5kg" encuentra "AQUAZIX GFA X5KG")
             let searchTerms = val.toLowerCase().split(' ').filter(t => t.trim() !== '');
             let matches = knownProducts.filter(p => {
                 let n = p.nombre.toLowerCase();
@@ -1719,7 +1784,6 @@
                 let divItem = document.createElement("div");
                 if(p.nombre.toLowerCase() === val.toLowerCase()) matchExacto = true;
                 
-                // Mostrar el stock total al buscar en Compras y Ventas
                 let stockHtml = "";
                 if(modulo === 'ventas' || modulo === 'compras') {
                     let totalStock = invActual.filter(i => i.nombre.trim().toLowerCase() === p.nombre.trim().toLowerCase() && i.stock > 0).reduce((sum, i) => sum + i.stock, 0);
@@ -1733,7 +1797,6 @@
                     input.value = p.nombre; 
                     
                     const precioInput = document.getElementById(`precio-${modulo}`);
-                    // Si encontramos un precio guardado, lo asignamos automáticamente
                     if (precioInput && (p.precio > 0 || precioInput.value === "")) {
                         precioInput.value = p.precio || "";
                     }
@@ -2039,11 +2102,11 @@
                     }
                 }
                 
-                // NUEVO: Detectar si el producto de la tabla ya está en tu catálogo público o no
                 let estaEnCatalogo = productosGlobales.some(p => p.nombre.trim().toLowerCase() === item.nombre.trim().toLowerCase());
+                let nombreAtributo = item.nombre.replace(/"/g, '&quot;');
                 let actionHtml = estaEnCatalogo 
                     ? `<span style="color:var(--primary); font-size:0.8rem; font-weight:bold;">✔️ En catálogo</span>` 
-                    : `<button class="btn-table-action" style="background:var(--primary); color:white; padding:4px 8px; border-radius:5px; font-size:0.85rem; font-weight:bold; cursor:pointer;" onclick="prepararNuevoProducto('${item.nombre}')" title="Crear en el Catálogo">➕ Publicar</button>`;
+                    : `<button class="btn-table-action" style="background:var(--primary); color:white; padding:4px 8px; border-radius:5px; font-size:0.85rem; font-weight:bold; cursor:pointer;" onclick="prepararNuevoProducto(this.getAttribute('data-nombre'))" data-nombre="${nombreAtributo}" title="Crear en el Catálogo">➕ Publicar</button>`;
 
                 tbody.innerHTML += `<tr style="${colorFila}"><td><strong>${item.nombre}</strong></td><td>${item.lote}</td><td>${item.vencimiento}</td><td class="text-right" style="font-size:1.1rem; font-weight:bold;">${item.stock}</td><td>${estadoHtml}</td><td style="text-align:center;">${actionHtml}</td></tr>`;
             });
@@ -2236,6 +2299,71 @@
         if(r) generarPDFTransaccion(r, modulo);
     }
 
+    window.previsualizarRegistroAdmin = function(modulo, docId) {
+        const r = window.adminRecordsCache[modulo].find(r => r.id === docId);
+        if(!r) return;
+
+        let moduloName = modulo === 'ventas' ? 'VENTA' : (modulo === 'compras' ? 'COMPRA' : 'COTIZACIÓN');
+
+        let html = `
+            <div style="text-align:center; margin-bottom:15px;">
+                <h3 style="margin:0; color: var(--accent);">ANIMAL PRO</h3>
+                <div style="font-weight:bold; color:#555;">COMPROBANTE DE ${moduloName}</div>
+            </div>
+            <div style="display:flex; justify-content: space-between; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px;">
+                <div><b>Fecha:</b> ${r.fecha}</div>
+                <div><b>N° Doc:</b> ${r.numeroDoc || 'N/A'}</div>
+            </div>
+            <div style="margin-bottom: 15px;"><b>Tercero:</b> ${r.persona}</div>
+            
+            <table style="width:100%; text-align:left; border-collapse: collapse; font-size: 0.85rem;">
+                <thead>
+                    <tr style="background:#eee;">
+                        <th style="padding:5px; border-radius: 5px 0 0 5px;">Producto</th>
+                        <th style="padding:5px; text-align:center;">Cant</th>
+                        <th style="padding:5px; text-align:right; border-radius: 0 5px 5px 0;">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        r.items.forEach(i => {
+            html += `<tr>
+                <td style="padding:8px 5px; border-bottom:1px solid #eee;">
+                    <strong>${i.nombre}</strong><br>
+                    <span style="color:#777; font-size:0.75rem;">Lote: ${i.lote || 'N/A'} | Venc: ${i.vencimiento || '-'} | $${i.precio.toLocaleString()} c/u</span>
+                </td>
+                <td style="padding:8px 5px; border-bottom:1px solid #eee; text-align:center;">${i.cant}</td>
+                <td style="padding:8px 5px; border-bottom:1px solid #eee; text-align:right;">$${i.subtotal.toLocaleString(undefined, {maximumFractionDigits: 2})}</td>
+            </tr>`;
+        });
+
+        html += `
+                </tbody>
+            </table>
+            
+            <div style="text-align:right; margin-top: 15px; padding-top: 10px; border-top: 2px dashed #ddd;">
+                <div style="color:#666; font-size:0.9rem;">Subtotal: $${(r.subtotal || 0).toLocaleString(undefined, {maximumFractionDigits: 2})}</div>
+                <div style="color:#666; font-size:0.9rem;">Impuestos: $${(r.impuestoValor || 0).toLocaleString(undefined, {maximumFractionDigits: 2})}</div>
+                <div style="font-size:1.2rem; font-weight:bold; color:var(--accent); margin-top:5px;">TOTAL: $${(r.totalFinal || r.total || 0).toLocaleString(undefined, {maximumFractionDigits: 2})}</div>
+            </div>
+        `;
+
+        document.getElementById('preview-body').innerHTML = html;
+        
+        const btnPrint = document.getElementById('btn-print-preview');
+        btnPrint.onclick = function() { 
+            imprimirRegistroAdmin(modulo, docId); 
+            cerrarModalPreview();
+        };
+
+        document.getElementById('modal-preview').style.display = 'flex';
+    }
+
+    window.cerrarModalPreview = function() {
+        document.getElementById('modal-preview').style.display = 'none';
+    }
+
     function generarPDFTransaccion(data, modulo) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
@@ -2315,7 +2443,7 @@
             if (modulo === 'ventas' || modulo === 'compras') { 
                 window.modulosCargados[modulo] = true; 
                 renderizarInventario(); 
-                renderizarTablaModulo('productos'); // ESTO ES CLAVE: Actualiza la tabla de productos ocultos al cargar compras
+                renderizarTablaModulo('productos'); 
             }
             renderizarTablaModulo(modulo);
         });
