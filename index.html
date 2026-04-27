@@ -1219,30 +1219,57 @@
 
         for (let i = 0; i < productosGlobales.length; i++) {
             const p = productosGlobales[i];
-            if (itemsOnPage === 2) { doc.addPage(); pageNum++; drawHeadFoot(pageNum); yOffset = 25; itemsOnPage = 0; }
-            doc.setFillColor(244, 247, 246); doc.setDrawColor(37, 211, 102); doc.setLineWidth(0.5); doc.roundedRect(10, yOffset, 190, 120, 5, 5, 'FD'); 
-            doc.setFillColor(255, 255, 255); doc.roundedRect(15, yOffset + 10, 85, 100, 3, 3, 'FD');
+            
+            // Cambiamos el límite a 3 artículos por página
+            if (itemsOnPage === 3) { doc.addPage(); pageNum++; drawHeadFoot(pageNum); yOffset = 25; itemsOnPage = 0; }
+            
+            // Fondo de la tarjeta (altura más corta: 82mm)
+            doc.setFillColor(244, 247, 246); doc.setDrawColor(37, 211, 102); doc.setLineWidth(0.5); doc.roundedRect(10, yOffset, 190, 82, 5, 5, 'FD'); 
+            
+            // Alternar lado: par = izquierda, impar = derecha
+            let esIzquierda = (i % 2 === 0);
+            let imgX = esIzquierda ? 15 : 135;
+            let textX = esIzquierda ? 85 : 15;
+            
+            // Fondo blanco de la imagen (tamaño ajustado 60x62mm)
+            doc.setFillColor(255, 255, 255); doc.roundedRect(imgX, yOffset + 10, 60, 62, 3, 3, 'FD');
+            
             if(p.imagen && p.imagen.trim() !== "") {
                 const b64 = await imgToBase64(p.imagen);
-                if(b64) doc.addImage(b64, 'JPEG', 17, yOffset + 12, 81, 96);
-                else { doc.setTextColor(200); doc.setFontSize(40); doc.text("📷", 57, yOffset + 60, { align: "center" }); }
+                if(b64) doc.addImage(b64, 'JPEG', imgX + 2, yOffset + 12, 56, 58);
+                else { doc.setTextColor(200); doc.setFontSize(30); doc.text("📷", imgX + 30, yOffset + 45, { align: "center" }); }
             } else {
-                doc.setTextColor(200); doc.setFontSize(40); doc.text("📷", 57, yOffset + 60, { align: "center" });
+                doc.setTextColor(200); doc.setFontSize(30); doc.text("📷", imgX + 30, yOffset + 45, { align: "center" });
             }
-            doc.setTextColor(27, 94, 32); doc.setFont("helvetica", "bold"); doc.setFontSize(22);
-            let sTitle = doc.splitTextToSize(p.nombre.toUpperCase(), 85); doc.text(sTitle, 110, yOffset + 22);
-            let lineY = yOffset + 25 + ((sTitle.length - 1) * 8); doc.setDrawColor(200); doc.line(110, lineY, 190, lineY);
-            doc.setTextColor(80); doc.setFont("helvetica", "normal"); doc.setFontSize(11);
-            let sDesc = doc.splitTextToSize(p.descripcion || "• Excelente calidad.", 85); doc.text(sDesc, 110, lineY + 7);
+            
+            // Título
+            doc.setTextColor(27, 94, 32); doc.setFont("helvetica", "bold"); doc.setFontSize(16);
+            let sTitle = doc.splitTextToSize(p.nombre.toUpperCase(), 105); doc.text(sTitle, textX, yOffset + 18);
+            
+            // Línea separadora
+            let lineY = yOffset + 21 + ((sTitle.length - 1) * 6); doc.setDrawColor(200); doc.line(textX, lineY, textX + 105, lineY);
+            
+            // Descripción (limitada para que no desborde)
+            doc.setTextColor(80); doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+            let shortDesc = p.descripcion || "• Excelente calidad.";
+            if(shortDesc.length > 110) shortDesc = shortDesc.substring(0, 107) + "..."; 
+            let sDesc = doc.splitTextToSize(shortDesc, 105); doc.text(sDesc, textX, lineY + 6);
+            
+            // Precios y Promociones
             let pFinal = parseInt(p.precio), pOrig = parseInt(p.precioOriginal);
             if (!isNaN(pOrig) && pOrig > pFinal) {
-                doc.setTextColor(150); doc.setFontSize(14); doc.setFont("helvetica", "normal");
-                let txt = `$${pOrig.toLocaleString()}`; doc.text(txt, 110, yOffset + 95); let tW = doc.getTextWidth(txt); doc.line(110, yOffset + 93.5, 110 + tW, yOffset + 93.5); 
-                let porc = Math.round(((pOrig - pFinal) / pOrig) * 100); doc.setTextColor(229, 57, 53); doc.setFont("helvetica", "bold"); doc.text(`-${porc}%`, 110 + tW + 5, yOffset + 95);
+                doc.setTextColor(150); doc.setFontSize(12); doc.setFont("helvetica", "normal");
+                let txt = `$${pOrig.toLocaleString()}`; doc.text(txt, textX, yOffset + 62); 
+                let tW = doc.getTextWidth(txt); doc.line(textX, yOffset + 60.5, textX + tW, yOffset + 60.5); 
+                let porc = Math.round(((pOrig - pFinal) / pOrig) * 100); doc.setTextColor(229, 57, 53); doc.setFont("helvetica", "bold"); doc.text(`-${porc}%`, textX + tW + 3, yOffset + 62);
             }
-            doc.setTextColor(27, 94, 32); doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("Llévalo por solo:", 110, yOffset + 103);
-            doc.setTextColor(37, 211, 102); doc.setFontSize(30); doc.text(`$${pFinal.toLocaleString()}`, 110, yOffset + 115);
-            yOffset += 130; itemsOnPage++;
+            
+            // Precio Final
+            doc.setTextColor(27, 94, 32); doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("Llévalo por solo:", textX, yOffset + 68);
+            doc.setTextColor(37, 211, 102); doc.setFontSize(22); doc.text(`$${pFinal.toLocaleString()}`, textX, yOffset + 76);
+            
+            // Salto para el siguiente producto (82 de altura + 6 de margen)
+            yOffset += 88; itemsOnPage++;
         }
         doc.save(`Catalogo_AnimalPro.pdf`); document.getElementById('btnExportPDF').innerText = "📖 Descargar Catálogo PDF"; document.getElementById('btnExportPDF').disabled = false;
     }
