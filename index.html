@@ -1220,60 +1220,85 @@
         for (let i = 0; i < productosGlobales.length; i++) {
             const p = productosGlobales[i];
             
-            // Cambiamos el límite a 3 artículos por página
-            if (itemsOnPage === 3) { doc.addPage(); pageNum++; drawHeadFoot(pageNum); yOffset = 25; itemsOnPage = 0; }
+            // EXACTAMENTE 3 POR PÁGINA
+            if (itemsOnPage === 3) { 
+                doc.addPage(); pageNum++; drawHeadFoot(pageNum); yOffset = 25; itemsOnPage = 0; 
+            }
             
-            // Fondo de la tarjeta (altura más corta: 82mm)
-            doc.setFillColor(244, 247, 246); doc.setDrawColor(37, 211, 102); doc.setLineWidth(0.5); doc.roundedRect(10, yOffset, 190, 82, 5, 5, 'FD'); 
+            // ALTURA FIJA PARA GARANTIZAR 3 POR HOJA
+            let cardHeight = 84; 
+            
+            // Fondo de la tarjeta
+            doc.setFillColor(244, 247, 246); doc.setDrawColor(37, 211, 102); doc.setLineWidth(0.5); 
+            doc.roundedRect(10, yOffset, 190, cardHeight, 5, 5, 'FD'); 
             
             // Alternar lado: par = izquierda, impar = derecha
             let esIzquierda = (i % 2 === 0);
             let imgX = esIzquierda ? 15 : 135;
-            let textX = esIzquierda ? 85 : 15;
+            let textX = esIzquierda ? 80 : 15;
+            let maxTextWidth = 110;
             
-            // Fondo blanco de la imagen (tamaño ajustado 60x62mm)
-            doc.setFillColor(255, 255, 255); doc.roundedRect(imgX, yOffset + 10, 60, 62, 3, 3, 'FD');
+            // Fondo blanco de la imagen (centrado verticalmente en la tarjeta)
+            let imgY = yOffset + 11;
+            doc.setFillColor(255, 255, 255); doc.roundedRect(imgX, imgY, 60, 62, 3, 3, 'FD');
             
             if(p.imagen && p.imagen.trim() !== "") {
                 const b64 = await imgToBase64(p.imagen);
-                if(b64) doc.addImage(b64, 'JPEG', imgX + 2, yOffset + 12, 56, 58);
-                else { doc.setTextColor(200); doc.setFontSize(30); doc.text("📷", imgX + 30, yOffset + 45, { align: "center" }); }
+                if(b64) doc.addImage(b64, 'JPEG', imgX + 2, imgY + 2, 56, 58);
+                else { doc.setTextColor(200); doc.setFontSize(30); doc.text("📷", imgX + 30, imgY + 35, { align: "center" }); }
             } else {
-                doc.setTextColor(200); doc.setFontSize(30); doc.text("📷", imgX + 30, yOffset + 45, { align: "center" });
+                doc.setTextColor(200); doc.setFontSize(30); doc.text("📷", imgX + 30, imgY + 35, { align: "center" });
             }
             
             // Título
-            doc.setTextColor(27, 94, 32); doc.setFont("helvetica", "bold"); doc.setFontSize(16);
-            let sTitle = doc.splitTextToSize(p.nombre.toUpperCase(), 105); doc.text(sTitle, textX, yOffset + 18);
+            doc.setTextColor(27, 94, 32); doc.setFont("helvetica", "bold"); doc.setFontSize(15);
+            let sTitle = doc.splitTextToSize(p.nombre.toUpperCase(), maxTextWidth);
+            doc.text(sTitle, textX, yOffset + 15);
             
             // Línea separadora
-            let lineY = yOffset + 21 + ((sTitle.length - 1) * 6); doc.setDrawColor(200); doc.line(textX, lineY, textX + 105, lineY);
+            let lineY = yOffset + 16 + ((sTitle.length - 1) * 5.5); 
+            doc.setDrawColor(200); doc.line(textX, lineY, textX + maxTextWidth, lineY);
             
-            // Descripción (limitada para que no desborde)
-            doc.setTextColor(80); doc.setFont("helvetica", "normal"); doc.setFontSize(10);
-            let shortDesc = p.descripcion || "• Excelente calidad.";
-            if(shortDesc.length > 110) shortDesc = shortDesc.substring(0, 107) + "..."; 
-            let sDesc = doc.splitTextToSize(shortDesc, 105); doc.text(sDesc, textX, lineY + 6);
+            // --- AJUSTE DINÁMICO DE DESCRIPCIÓN ---
+            // Para asegurar que NUNCA se corte el texto y mantener las 3 tarjetas por hoja.
+            let fullDesc = p.descripcion || "• Excelente calidad.";
+            let descFontSize = 10;
+            doc.setFontSize(descFontSize);
+            let sDesc = doc.splitTextToSize(fullDesc, maxTextWidth);
             
-            // Precios y Promociones
-            let pFinal = parseInt(p.precio), pOrig = parseInt(p.precioOriginal);
-            if (!isNaN(pOrig) && pOrig > pFinal) {
-                doc.setTextColor(150); doc.setFontSize(12); doc.setFont("helvetica", "normal");
-                let txt = `$${pOrig.toLocaleString()}`; doc.text(txt, textX, yOffset + 62); 
-                let tW = doc.getTextWidth(txt); doc.line(textX, yOffset + 60.5, textX + tW, yOffset + 60.5); 
-                let porc = Math.round(((pOrig - pFinal) / pOrig) * 100); doc.setTextColor(229, 57, 53); doc.setFont("helvetica", "bold"); doc.text(`-${porc}%`, textX + tW + 3, yOffset + 62);
+            // Espacio disponible desde la línea hasta el precio
+            let precioY = yOffset + cardHeight - 12;
+            let maxDescHeight = (precioY - 8) - lineY; 
+            
+            // Reducir la fuente inteligentemente hasta que el texto quepa completo
+            while ((sDesc.length * (descFontSize * 0.45)) > maxDescHeight && descFontSize > 6) {
+                descFontSize -= 0.5;
+                doc.setFontSize(descFontSize);
+                sDesc = doc.splitTextToSize(fullDesc, maxTextWidth);
             }
             
-            // Precio Final
-            doc.setTextColor(27, 94, 32); doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("Llévalo por solo:", textX, yOffset + 68);
-            doc.setTextColor(37, 211, 102); doc.setFontSize(22); doc.text(`$${pFinal.toLocaleString()}`, textX, yOffset + 76);
+            doc.setTextColor(80); doc.setFont("helvetica", "normal"); doc.setFontSize(descFontSize);
+            doc.text(sDesc, textX, lineY + 5);
             
-            // Salto para el siguiente producto (82 de altura + 6 de margen)
-            yOffset += 88; itemsOnPage++;
+            // --- PRECIOS (Fijados al fondo de la tarjeta) ---
+            let pFinal = parseInt(p.precio), pOrig = parseInt(p.precioOriginal);
+            
+            if (!isNaN(pOrig) && pOrig > pFinal) {
+                doc.setTextColor(150); doc.setFontSize(12); doc.setFont("helvetica", "normal");
+                let txt = `$${pOrig.toLocaleString()}`; doc.text(txt, textX, precioY - 6); 
+                let tW = doc.getTextWidth(txt); doc.line(textX, precioY - 7.5, textX + tW, precioY - 7.5); 
+                let porc = Math.round(((pOrig - pFinal) / pOrig) * 100); doc.setTextColor(229, 57, 53); doc.setFont("helvetica", "bold"); doc.text(`-${porc}%`, textX + tW + 3, precioY - 6);
+            }
+            
+            doc.setTextColor(27, 94, 32); doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("Llévalo por solo:", textX, precioY);
+            doc.setTextColor(37, 211, 102); doc.setFontSize(22); doc.text(`$${pFinal.toLocaleString()}`, textX, precioY + 8);
+            
+            // Salto para el siguiente producto (84 altura + 5 de margen = 89)
+            yOffset += cardHeight + 5; 
+            itemsOnPage++;
         }
         doc.save(`Catalogo_AnimalPro.pdf`); document.getElementById('btnExportPDF').innerText = "📖 Descargar Catálogo PDF"; document.getElementById('btnExportPDF').disabled = false;
     }
-
 
     // ========================================================
     // --- LÓGICA DEL PANEL ADMINISTRATIVO (SISTEMA POS) ---
