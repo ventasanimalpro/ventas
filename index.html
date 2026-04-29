@@ -1217,20 +1217,13 @@
 
         drawHeadFoot(pageNum);
 
-        // --- NUEVA LÓGICA DE ORDENAMIENTO ---
-        // Ordenar copia de productos por Grupo y luego por Nombre
         let productosOrdenadosPDF = [...productosGlobales].sort((a, b) => {
             let grupoA = (a.grupo || "GENERAL").trim().toUpperCase();
             let grupoB = (b.grupo || "GENERAL").trim().toUpperCase();
-            
-            // 1. Ordenar por Grupo
             if (grupoA < grupoB) return -1;
             if (grupoA > grupoB) return 1;
-            
-            // 2. Si son del mismo grupo, ordenar alfabéticamente por Nombre
             let nombreA = (a.nombre || "").trim().toUpperCase();
             let nombreB = (b.nombre || "").trim().toUpperCase();
-            
             if (nombreA < nombreB) return -1;
             if (nombreA > nombreB) return 1;
             return 0;
@@ -1279,7 +1272,6 @@
             doc.setDrawColor(200); doc.line(textX, lineY, textX + maxTextWidth, lineY);
             
             // --- AJUSTE DINÁMICO DE DESCRIPCIÓN ---
-            // Para asegurar que NUNCA se corte el texto y mantener las 3 tarjetas por hoja.
             let fullDesc = p.descripcion || "• Excelente calidad.";
             let descFontSize = 10;
             doc.setFontSize(descFontSize);
@@ -1312,7 +1304,6 @@
             doc.setTextColor(27, 94, 32); doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("Llévalo por solo:", textX, precioY);
             doc.setTextColor(37, 211, 102); doc.setFontSize(22); doc.text(`$${pFinal.toLocaleString()}`, textX, precioY + 8);
             
-            // Salto para el siguiente producto (84 altura + 5 de margen = 89)
             yOffset += cardHeight + 5; 
             itemsOnPage++;
         }
@@ -1338,7 +1329,6 @@
         document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active')); boton.classList.add('active');
         document.querySelectorAll('.modulo-admin').forEach(m => m.classList.remove('active')); document.getElementById('mod-' + idModulo).classList.add('active');
         
-        // Si entra al dashboard, renderizar gráfica
         if (idModulo === 'dashboard') {
             window.renderizarDashboard();
         }
@@ -1421,7 +1411,6 @@
         
         const reader = new FileReader();
         reader.onload = function(event) {
-            // Creamos un Image object para redimensionar y comprimir y no sobrepasar el límite de 1MB de Firebase
             const img = new Image();
             img.onload = function() {
                 const MAX_WIDTH = 600;
@@ -1447,7 +1436,6 @@
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
 
-                // Comprimimos a JPEG (calidad 70%) para que pase holgadamente sin errores
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
                 
                 document.getElementById('prod-img-base64').value = dataUrl;
@@ -1461,17 +1449,12 @@
     window.guardarProductoCatalogo = async function() {
         if(!userId) return alert("Error de autenticación.");
         
-        // Extracción segura (previene Undefineds)
         const nombre = (document.getElementById('prod-nombre').value || "").trim();
         const grupo = (document.getElementById('prod-grupo').value || "").trim() || 'GENERAL';
-        
-        // Parsear números de forma defensiva para evitar NaNs en Firestore
         const precioRaw = parseFloat(document.getElementById('prod-precio').value);
         const precio = isNaN(precioRaw) ? 0 : precioRaw;
-        
         const precioOrigRaw = parseFloat(document.getElementById('prod-precio-orig').value);
         const precioOriginal = isNaN(precioOrigRaw) ? "" : precioOrigRaw;
-        
         const descripcion = (document.getElementById('prod-desc').value || "").trim();
         const imagen = (document.getElementById('prod-img-base64').value || "").trim();
 
@@ -1480,15 +1463,7 @@
         const btn = document.getElementById('btn-guardar-prod');
         btn.disabled = true; btn.innerText = "⏳ Guardando...";
 
-        const prodData = { 
-            nombre: nombre, 
-            grupo: grupo, 
-            precio: precio, 
-            precioOriginal: precioOriginal, 
-            descripcion: descripcion, 
-            imagen: imagen, 
-            updatedAt: Date.now() 
-        };
+        const prodData = { nombre, grupo, precio, precioOriginal, descripcion, imagen, updatedAt: Date.now() };
 
         try {
             if (prodEditId) {
@@ -1500,8 +1475,7 @@
             alert("Producto guardado correctamente en tu catálogo.");
             cancelarEdicionProducto();
         } catch (e) {
-            console.error(e); 
-            alert("Error al guardar en base de datos. Revisa tus permisos de Firebase.");
+            console.error(e); alert("Error al guardar en base de datos.");
         } finally {
             btn.disabled = false; btn.innerText = "💾 Guardar Producto";
         }
@@ -1517,7 +1491,6 @@
         document.getElementById('prod-precio').value = prod.precio || '';
         document.getElementById('prod-precio-orig').value = prod.precioOriginal || '';
         document.getElementById('prod-desc').value = prod.descripcion || '';
-        
         document.getElementById('prod-img-base64').value = prod.imagen || '';
         document.getElementById('prod-img-file').value = ''; 
         
@@ -1530,7 +1503,6 @@
         document.getElementById('btn-guardar-prod').style.background = 'var(--warning)';
         document.getElementById('btn-guardar-prod').innerText = '💾 Guardar Cambios';
         document.getElementById('btn-cancelar-prod').style.display = 'block';
-        
         document.getElementById('mod-productos').scrollIntoView({ behavior: 'smooth' });
     }
 
@@ -1541,11 +1513,9 @@
         document.getElementById('prod-precio').value = '';
         document.getElementById('prod-precio-orig').value = '';
         document.getElementById('prod-desc').value = '';
-        
         document.getElementById('prod-img-base64').value = '';
         document.getElementById('prod-img-file').value = '';
         document.getElementById('prod-img-preview').innerHTML = '';
-        
         document.getElementById('btn-guardar-prod').style.background = 'var(--primary)';
         document.getElementById('btn-guardar-prod').innerText = '💾 Guardar Producto';
         document.getElementById('btn-cancelar-prod').style.display = 'none';
@@ -1555,7 +1525,6 @@
         const prod = productosGlobales.find(p => p.id === id);
         if (!prod) return alert("No se encontró el producto.");
 
-        // NUEVA RESTRICCIÓN: Verificar si el producto tiene movimientos antes de permitir el borrado
         let tieneMovimientos = false;
         const nombreProd = prod.nombre.trim().toLowerCase();
         
@@ -1565,7 +1534,6 @@
             );
         };
 
-        // Verificamos en las transacciones principales
         if (checkMovimientos('ventas') || checkMovimientos('compras') || checkMovimientos('cotizaciones')) {
             tieneMovimientos = true;
         }
@@ -1580,19 +1548,15 @@
         } catch (e) { alert("Error eliminando producto."); }
     }
     
-    // Función nueva para enviar un producto del inventario directo a crearse en el catálogo
     window.prepararNuevoProducto = function(nombre) {
-        // Encontrar la pestaña de Mis Productos y activarla
         const tabs = Array.from(document.querySelectorAll('.admin-tab'));
         const tabProductos = tabs.find(t => t.textContent.includes('Mis Productos'));
         if(tabProductos) cambiarModulo('productos', tabProductos);
         
-        cancelarEdicionProducto(); // Limpiar el formulario
-        
+        cancelarEdicionProducto(); 
         const nombreReal = nombre.replace(/&quot;/g, '"');
         document.getElementById('prod-nombre').value = nombreReal;
 
-        // Buscar si ya tenemos un precio conocido en el inventario o ventas y autollenarlo
         let knownProducts = getKnownProducts();
         let kp = knownProducts.find(p => p.nombre.trim().toLowerCase() === nombreReal.trim().toLowerCase());
         if (kp && kp.precio > 0) {
@@ -1600,17 +1564,14 @@
         }
 
         document.getElementById('mod-productos').scrollIntoView({ behavior: 'smooth' });
-        
         setTimeout(() => document.getElementById('prod-precio').focus(), 300);
     };
 
     function getKnownProducts() {
         let known = new Map();
-        
         productosGlobales.forEach(p => {
             known.set(p.nombre.trim().toLowerCase(), { nombre: p.nombre, precio: parseInt(p.precio) || 0 });
         });
-        
         (window.adminRecordsCache.ventas || []).forEach(venta => {
             (venta.items || []).forEach(item => {
                 let key = item.nombre.trim().toLowerCase();
@@ -1619,7 +1580,6 @@
                 }
             });
         });
-
         (window.adminRecordsCache.compras || []).forEach(compra => {
             (compra.items || []).forEach(item => {
                 let key = item.nombre.trim().toLowerCase();
@@ -1628,7 +1588,6 @@
                 }
             });
         });
-        
         return Array.from(known.values());
     }
 
@@ -1658,12 +1617,10 @@
         if (modulo === 'productos') {
             let mergedProducts = [];
             let knownNames = new Set();
-            
             productosGlobales.forEach(p => {
                 mergedProducts.push({ ...p, isPublished: true });
                 knownNames.add(p.nombre.trim().toLowerCase());
             });
-            
             getKnownProducts().forEach(kp => {
                 let normName = kp.nombre.trim().toLowerCase();
                 if (!knownNames.has(normName)) {
@@ -1742,11 +1699,9 @@
             let tr = document.createElement('tr');
             if (modulo === 'productos') {
                 let img = r.imagen && r.imagen.trim() !== "" ? `<img src="${r.imagen}" style="width:40px; height:40px; object-fit:cover; border-radius:5px;">` : '🖼️';
-                
                 if (r.isPublished) {
                     tr.innerHTML = `<td>${img}</td><td><strong>${r.nombre}</strong> <span style="color:var(--primary); font-size:0.75rem; font-weight:bold; margin-left:5px;">(Público)</span></td><td><span style="background:#eee; padding:3px 8px; border-radius:5px; font-size:0.8rem;">${r.grupo || 'GENERAL'}</span></td><td class="text-right" style="color:var(--accent); font-weight:bold;">$${parseInt(r.precio || 0).toLocaleString()}</td><td class="text-right"><button class="btn-table-action" title="Editar" onclick="editarProductoCatalogo('${r.id}')">✏️</button><button class="btn-table-action" style="color:red;" title="Borrar" onclick="borrarProductoCatalogo('${r.id}')">✖</button></td>`;
                 } else {
-                    // Usando un atributo custom evita fallos si el nombre contiene comillas que rompan el HTML del onclick
                     let nombreAtributo = r.nombre.replace(/"/g, '&quot;');
                     tr.style.background = "#fff8e1"; 
                     tr.innerHTML = `<td>${img}</td><td><strong>${r.nombre}</strong> <span style="color:var(--warning); font-size:0.75rem; font-weight:bold; margin-left:5px;">(Oculto)</span></td><td><span style="background:#ffe0b2; color:#e65100; padding:3px 8px; border-radius:5px; font-size:0.8rem; font-weight:bold;">${r.grupo}</span></td><td class="text-right" style="color:gray;">$${parseInt(r.precio || 0).toLocaleString()}</td><td class="text-right"><button class="btn-table-action" style="background:var(--primary); color:white; padding:4px 8px; border-radius:5px; font-size:0.85rem; font-weight:bold; cursor:pointer;" onclick="prepararNuevoProducto(this.getAttribute('data-nombre'))" data-nombre="${nombreAtributo}" title="Crear en el Catálogo">➕ Publicar</button></td>`;
@@ -2174,10 +2129,9 @@
                 }
                 
                 let estaEnCatalogo = productosGlobales.some(p => p.nombre.trim().toLowerCase() === item.nombre.trim().toLowerCase());
-                let nombreAtributo = item.nombre.replace(/"/g, '&quot;');
                 let actionHtml = estaEnCatalogo 
                     ? `<span style="color:var(--primary); font-size:0.8rem; font-weight:bold;">✔️ En catálogo</span>` 
-                    : `<button class="btn-table-action" style="background:var(--primary); color:white; padding:4px 8px; border-radius:5px; font-size:0.85rem; font-weight:bold; cursor:pointer;" onclick="prepararNuevoProducto(this.getAttribute('data-nombre'))" data-nombre="${nombreAtributo}" title="Crear en el Catálogo">➕ Publicar</button>`;
+                    : `<button class="btn-table-action" style="background:var(--primary); color:white; padding:4px 8px; border-radius:5px; font-size:0.85rem; font-weight:bold; cursor:pointer;" onclick="prepararNuevoProducto('${item.nombre}')" title="Crear en el Catálogo">➕ Publicar</button>`;
 
                 tbody.innerHTML += `<tr style="${colorFila}"><td><strong>${item.nombre}</strong></td><td>${item.lote}</td><td>${item.vencimiento}</td><td class="text-right" style="font-size:1.1rem; font-weight:bold;">${item.stock}</td><td>${estadoHtml}</td><td style="text-align:center;">${actionHtml}</td></tr>`;
             });
@@ -2377,10 +2331,18 @@
         let moduloName = modulo === 'ventas' ? 'VENTA' : (modulo === 'compras' ? 'COMPRA' : 'COTIZACIÓN');
 
         let html = `
-            <div style="text-align:center; margin-bottom:15px;">
-                <h3 style="margin:0; color: var(--accent);">ANIMAL PRO</h3>
-                <div style="font-weight:bold; color:#555;">COMPROBANTE DE ${moduloName}</div>
+            <div style="text-align:center; margin-bottom:15px; border-bottom: 2px solid #25d366; padding-bottom: 10px;">
+                <h2 style="margin:0; color: var(--accent); font-size: 1.5rem;">ANIMAL PRO DEL NORTE S.A.S</h2>
+                <div style="font-size: 0.85rem; color: #555; line-height: 1.4; margin-top: 5px;">
+                    NIT: 901.445.812-2<br>
+                    AV4A 7N 172 BRR ZONA INDUSTRIAL - Cúcuta, N.S.<br>
+                    Tel: 6075741710 - 3108648296 | Correo: recuperadorademateriales@hotmail.com
+                </div>
+                <div style="font-weight:bold; color:var(--accent); font-size: 1.1rem; margin-top: 10px; background: #e8f5e9; padding: 5px; border-radius: 5px;">
+                    COMPROBANTE DE ${moduloName}
+                </div>
             </div>
+            
             <div style="display:flex; justify-content: space-between; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px;">
                 <div><b>Fecha:</b> ${r.fecha}</div>
                 <div><b>N° Doc:</b> ${r.numeroDoc || 'N/A'}</div>
@@ -2438,14 +2400,41 @@
     function generarPDFTransaccion(data, modulo) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        doc.setFillColor(27, 94, 32); doc.rect(0, 0, 210, 20, 'F');
-        doc.setTextColor(255, 255, 255); doc.setFontSize(16); doc.text(`COMPROBANTE - ANIMAL PRO`, 105, 13, { align: "center" });
-        doc.setTextColor(50); doc.setFontSize(11);
-        doc.text(`Fecha: ${data.fecha}`, 15, 35);
-        doc.text(`Tercero: ${data.persona}`, 15, 42);
-        doc.text(`N° Doc: ${data.numeroDoc || 'N/A'}`, 15, 49);
+        
+        // Membrete Superior
+        doc.setFillColor(27, 94, 32); 
+        doc.rect(0, 0, 210, 40, 'F');
+        
+        doc.setTextColor(255, 255, 255); 
+        doc.setFontSize(16); 
+        doc.setFont("helvetica", "bold");
+        doc.text(`ANIMAL PRO DEL NORTE S.A.S`, 105, 12, { align: "center" });
+        
+        doc.setFontSize(10); 
+        doc.setFont("helvetica", "normal");
+        doc.text(`NIT: 901.445.812-2`, 105, 18, { align: "center" });
+        doc.text(`AV4A 7N 172 BRR ZONA INDUSTRIAL - Cúcuta, N.S.`, 105, 23, { align: "center" });
+        doc.text(`Tel: 6075741710 - 3108648296 | recuperadorademateriales@hotmail.com`, 105, 28, { align: "center" });
+        
+        doc.setFontSize(14); 
+        doc.setFont("helvetica", "bold");
+        doc.text(`COMPROBANTE DE ${modulo.toUpperCase()}`, 105, 36, { align: "center" });
+
+        // Datos del Documento
+        doc.setTextColor(50); doc.setFontSize(11); doc.setFont("helvetica", "normal");
+        doc.text(`Fecha: ${data.fecha}`, 15, 50);
+        doc.text(`Tercero: ${data.persona}`, 15, 57);
+        doc.text(`N° Doc: ${data.numeroDoc || 'N/A'}`, 15, 64);
+        
         const bodyData = data.items.map(i => [i.nombre, i.lote || 'N/A', i.cant.toString(), `$${i.precio.toLocaleString()}`, `${i.impPerc}%`, `$${i.subtotal.toLocaleString()}`]);
-        doc.autoTable({ startY: 55, head: [['Producto', 'Lote', 'Cant.', 'Precio', 'Imp(%)', 'Total']], body: bodyData, theme: 'striped', headStyles: { fillColor: [37, 211, 102] } });
+        doc.autoTable({ 
+            startY: 70, 
+            head: [['Producto', 'Lote', 'Cant.', 'Precio', 'Imp(%)', 'Total']], 
+            body: bodyData, 
+            theme: 'striped', 
+            headStyles: { fillColor: [37, 211, 102] } 
+        });
+        
         doc.save(`Doc_${data.numeroDoc}_${data.persona}.pdf`);
     }
 
@@ -2514,7 +2503,7 @@
             if (modulo === 'ventas' || modulo === 'compras') { 
                 window.modulosCargados[modulo] = true; 
                 renderizarInventario(); 
-                renderizarTablaModulo('productos'); 
+                renderizarTablaModulo('productos'); // ESTO ES CLAVE: Actualiza la tabla de productos ocultos al cargar compras
             }
             renderizarTablaModulo(modulo);
         });
