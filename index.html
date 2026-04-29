@@ -2435,6 +2435,20 @@
             headStyles: { fillColor: [37, 211, 102] } 
         });
         
+        // Agregar los totales al final de la tabla
+        let finalY = doc.lastAutoTable.finalY || 70;
+
+        doc.setFontSize(10);
+        doc.setTextColor(80);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Subtotal: $${(data.subtotal || 0).toLocaleString(undefined, {maximumFractionDigits: 2})}`, 195, finalY + 10, { align: "right" });
+        doc.text(`Impuestos: $${(data.impuestoValor || 0).toLocaleString(undefined, {maximumFractionDigits: 2})}`, 195, finalY + 16, { align: "right" });
+
+        doc.setFontSize(14);
+        doc.setTextColor(27, 94, 32);
+        doc.setFont("helvetica", "bold");
+        doc.text(`TOTAL FINAL: $${(data.totalFinal || data.total || 0).toLocaleString(undefined, {maximumFractionDigits: 2})}`, 195, finalY + 25, { align: "right" });
+        
         doc.save(`Doc_${data.numeroDoc}_${data.persona}.pdf`);
     }
 
