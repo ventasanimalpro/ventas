@@ -69,6 +69,7 @@
         /* Formularios y modales */
         .modal-content { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto; box-sizing: border-box;}
         input[type="text"]:not(.search-bar), input[type="password"], input[type="email"], input[type="number"], input[type="tel"], input[type="date"], select { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid #eee; background: #f9f9f9; border-radius: 10px; box-sizing: border-box; font-family: inherit;}
+        textarea { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid #eee; background: #f9f9f9; border-radius: 10px; box-sizing: border-box; font-family: inherit;}
         .btn-enviar { width: 100%; background: var(--accent); color: white; border: none; padding: 16px; font-weight: bold; border-radius: 10px; cursor: pointer; margin-top: 15px; }
 
         .modal-prod-content { background: white; padding: 20px; border-radius: 20px; width: 90%; max-width: 450px; position: relative; box-sizing: border-box; }
@@ -159,7 +160,7 @@
 <div id="vista-publica">
     <div id="modal-aviso" class="modal-overlay">
         <div class="aviso-content">
-            <h2>📢 Aviso Importante</h2>
+            <h2 id="aviso-titulo">📢 Aviso Importante</h2>
             <p id="texto-aviso"></p>
             <button class="btn-aviso-ok" onclick="cerrarAviso()">ENTENDIDO</button>
         </div>
@@ -205,10 +206,46 @@
             <button class="admin-tab" onclick="cambiarModulo('ingresos', this)">💵 Ingreso (Cartera)</button>
             <button class="admin-tab" onclick="cambiarModulo('egresos', this)">💸 Egreso (Tesorería)</button>
             <button class="admin-tab" onclick="cambiarModulo('cotizaciones', this)">📝 Cotizaciones</button>
+            <button class="admin-tab" onclick="cambiarModulo('configuracion', this)">⚙️ Ajustes</button>
         </div>
 
         <!-- Área de Contenido -->
         <div class="admin-content-area">
+
+            <!-- NUEVO MÓDULO: CONFIGURACIÓN GLOBAL -->
+            <div id="mod-configuracion" class="modulo-admin">
+                <h3 class="admin-title">Configuración del Catálogo</h3>
+                
+                <div class="admin-form-box" style="margin-bottom: 25px;">
+                    <h4 style="color:var(--accent); margin-top:0;">1. Tiempos de Entrega</h4>
+                    <p style="font-size:0.85rem; color:#666; margin-top:0;">Días mínimos de preparación que se mostrarán obligatoriamente a los clientes en el formulario del pedido.</p>
+                    
+                    <div class="admin-form-group" style="max-width: 250px;">
+                        <label>Días Mínimos para Recogida</label>
+                        <input type="number" id="config-dias" placeholder="Ej: 2" min="0">
+                        <span style="font-size: 0.8rem; color: gray; margin-top: 4px;">Pon 0 si el pedido puede recogerse hoy mismo.</span>
+                    </div>
+
+                    <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
+
+                    <h4 style="color:var(--accent); margin-top:0;">2. Mensaje Emergente (Pop-up Público)</h4>
+                    <p style="font-size:0.85rem; color:#666; margin-top:0;">Muestra una ventana importante a los clientes en cuanto abren tu catálogo (Ej: Vacaciones, Promociones).</p>
+                    
+                    <div class="admin-form-group">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 1rem; color: #333;">
+                            <input type="checkbox" id="config-aviso-activo" style="width: 20px; height: 20px; margin: 0;">
+                            <b>Activar mensaje emergente</b>
+                        </label>
+                    </div>
+
+                    <div class="admin-form-group" style="margin-top: 10px;">
+                        <label>Texto del Mensaje</label>
+                        <textarea id="config-aviso-texto" rows="4" placeholder="Ej: ¡Este mes de Octubre tendremos envíos gratis por compras mayores a $50.000!"></textarea>
+                    </div>
+
+                    <button class="btn-admin-action" style="margin-top:20px;" onclick="guardarConfiguracion()">💾 Guardar Ajustes</button>
+                </div>
+            </div>
 
             <!-- NUEVO MÓDULO: MIS PRODUCTOS -->
             <div id="mod-productos" class="modulo-admin">
@@ -885,13 +922,14 @@
     // Firebase Imports
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // Globales del Catálogo Público
     const WEB_APP_URL ="https://script.google.com/macros/s/AKfycbwpm8CKeqBRptJQfu47QhR27G65py60KKlP3b-OGqp4lwv9MFEpgpLV1yxgLLf5kx0/exec"; 
     let carrito = [];
-    let diasMinimosGlobal = 2; // Lo defines aquí y se usa localmente
-    let productosGlobales = []; // Ahora se llenará desde Firebase o Caché
+    let diasMinimosGlobal = 2; 
+    let productosGlobales = [];
+    let avisoMostrado = false; // Para evitar que salga el aviso varias veces en la misma sesión
 
     // Globales de Firebase y Panel Admin
     let db, auth, userId, appId;
@@ -927,11 +965,54 @@
         renderizarTablaModulo('productos');
     };
 
+    // --- FUNCIÓN PARA APLICAR LA CONFIGURACIÓN PÚBLICA (Se llama desde caché o Firebase) ---
+    function aplicarConfiguracionPublica(config) {
+        diasMinimosGlobal = config.diasMinimos !== undefined ? parseInt(config.diasMinimos) : 2;
+        
+        // Actualizar inputs del panel de administración
+        const configDias = document.getElementById('config-dias');
+        if(configDias) configDias.value = diasMinimosGlobal;
+        
+        const checkAviso = document.getElementById('config-aviso-activo');
+        if(checkAviso) checkAviso.checked = config.mostrarAviso || false;
+        
+        const textAviso = document.getElementById('config-aviso-texto');
+        if(textAviso) textAviso.value = config.mensajeAviso || "";
+
+        actualizarFechaRecogidaUI();
+
+        // Mostrar Aviso solo si está activado, si hay texto, si no se ha mostrado ya, y si es un cliente (no admin)
+        if (config.mostrarAviso && config.mensajeAviso && config.mensajeAviso.trim() !== "" && !avisoMostrado && !userId) {
+            document.getElementById('texto-aviso').innerHTML = config.mensajeAviso;
+            document.getElementById('modal-aviso').style.display = 'flex';
+            avisoMostrado = true;
+        }
+    }
+
+    function actualizarFechaRecogidaUI() {
+        const labelFecha = document.getElementById('label-fecha');
+        if (labelFecha) {
+            labelFecha.innerText = diasMinimosGlobal === 0 ? "¡Disponible para hoy mismo!:" : `Fecha para recoger (mínimo ${diasMinimosGlobal} día(s)):`;
+        }
+
+        const fechaInput = document.getElementById('fechaRecogida');
+        if (fechaInput) {
+            const hoy = new Date(); 
+            hoy.setDate(hoy.getDate() + diasMinimosGlobal);
+            const minDate = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+            
+            fechaInput.setAttribute('min', minDate); 
+            // Solo forzar la actualización del valor si está vacío o si la fecha actual es menor al mínimo
+            if (!fechaInput.value || fechaInput.value < minDate) {
+                fechaInput.value = minDate;
+            }
+        }
+    }
+
     // --- INICIALIZACIÓN GENERAL ---
     window.onload = async function() {
 
         // NUEVO: CACHÉ OFFLINE-FIRST (Stale-While-Revalidate)
-        // Intentamos cargar y mostrar los datos del catálogo que están guardados localmente
         try {
             const cacheCatalogo = localStorage.getItem('animalpro_catalogo_cache');
             if (cacheCatalogo) {
@@ -941,8 +1022,15 @@
                     renderizarCatalogoPublico(); // Renderizamos instantáneamente
                 }
             }
+            const cacheConfig = localStorage.getItem('animalpro_config_cache');
+            if (cacheConfig) {
+                aplicarConfiguracionPublica(JSON.parse(cacheConfig));
+            } else {
+                actualizarFechaRecogidaUI(); // Usar predeterminados si no hay caché
+            }
         } catch (e) {
-            console.warn("No se pudo leer la caché local del catálogo.", e);
+            console.warn("No se pudo leer la caché local.", e);
+            actualizarFechaRecogidaUI();
         }
 
         try {
@@ -959,26 +1047,39 @@
             db = getFirestore(app);
             appId = "animalpro"; 
 
-            // Cargar el catálogo público de Firebase en segundo plano
+            // Cargar el catálogo público y configuración de Firebase en segundo plano
             const prodRef = collection(db, 'productos_catalogo');
             onSnapshot(prodRef, (snapshot) => {
                 productosGlobales = [];
-                snapshot.forEach(doc => {
-                    productosGlobales.push({ id: doc.id, ...doc.data() });
+                let configuracion = { diasMinimos: 2, mostrarAviso: false, mensajeAviso: "" };
+
+                snapshot.forEach(docSnap => {
+                    // Separamos el documento de configuración de los productos normales
+                    if (docSnap.id === '_configuracion_') {
+                        configuracion = docSnap.data();
+                    } else {
+                        productosGlobales.push({ id: docSnap.id, ...docSnap.data() });
+                    }
                 });
 
                 // NUEVO: Guardar en caché lo que acaba de llegar de internet
                 try {
                     localStorage.setItem('animalpro_catalogo_cache', JSON.stringify(productosGlobales));
+                    localStorage.setItem('animalpro_config_cache', JSON.stringify(configuracion));
                 } catch (e) {
-                    console.warn("No se pudo guardar el catálogo en la caché local.", e);
+                    console.warn("No se pudo guardar en la caché local.", e);
                 }
+
+                // Aplicar la configuración (Aviso y Días mínimos)
+                aplicarConfiguracionPublica(configuracion);
 
                 // Volvemos a renderizar para mostrar los datos más frescos
                 renderizarCatalogoPublico();
                 renderizarTablaModulo('productos');
             }, (error) => {
                 if (error.code === 'permission-denied' || (error.message && error.message.includes('permissions'))) {
+                    // Solo mostramos el error de reglas si no es un aviso ya programado por el admin
+                    document.getElementById('aviso-titulo').innerHTML = `📢 Aviso de Seguridad`;
                     document.getElementById('texto-aviso').innerHTML = `Para mostrar el catálogo a tus clientes, ve a las reglas de Firestore y configúralo a:<br><br><code>match /productos_catalogo/{document} {<br>  allow read: if true;<br>  allow write: if request.auth != null;<br>}</code>`;
                     document.getElementById('modal-aviso').style.display = 'flex';
                 }
@@ -990,6 +1091,8 @@
                     window.vencimientosMostrados = false; 
                     window.modulosCargados = { ventas: false, compras: false };
 
+                    // Ocultamos cualquier aviso público si entramos como admin
+                    document.getElementById('modal-aviso').style.display = 'none';
                     document.getElementById('vista-publica').style.display = 'none';
                     document.getElementById('admin-panel').style.display = 'block';
                     document.body.style.background = "var(--admin-bg)";
@@ -1027,17 +1130,6 @@
                 }
             });
         } catch(e) { console.error("Error al iniciar Firebase:", e); }
-
-        const labelFecha = document.getElementById('label-fecha');
-        labelFecha.innerText = diasMinimosGlobal === 0 ? "¡Disponible para hoy mismo!:" : `Fecha para recoger (mínimo ${diasMinimosGlobal} día(s)):`;
-
-        const fechaInput = document.getElementById('fechaRecogida');
-        const hoy = new Date(); 
-        hoy.setDate(hoy.getDate() + diasMinimosGlobal);
-        const minDate = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
-        
-        fechaInput.setAttribute('min', minDate); 
-        fechaInput.value = minDate;
     };
 
 
@@ -1423,7 +1515,30 @@
         });
     }
 
-    // --- NUEVAS FUNCIONES PARA GESTIONAR EL CATÁLOGO (MIS PRODUCTOS) ---
+    // --- NUEVAS FUNCIONES PARA GESTIONAR LA CONFIGURACIÓN ---
+    window.guardarConfiguracion = async function() {
+        if(!userId) return alert("Error de autenticación.");
+        
+        const diasMinimos = parseInt(document.getElementById('config-dias').value);
+        const mostrarAviso = document.getElementById('config-aviso-activo').checked;
+        const mensajeAviso = document.getElementById('config-aviso-texto').value;
+
+        try {
+            await setDoc(doc(db, 'productos_catalogo', '_configuracion_'), {
+                diasMinimos: isNaN(diasMinimos) ? 0 : diasMinimos,
+                mostrarAviso: mostrarAviso,
+                mensajeAviso: mensajeAviso,
+                updatedAt: Date.now()
+            }, { merge: true });
+            
+            alert("✅ Ajustes guardados correctamente. Los cambios ya son públicos.");
+        } catch (e) {
+            console.error(e); 
+            alert("Error al guardar la configuración en la base de datos.");
+        }
+    }
+
+    // --- FUNCIONES PARA GESTIONAR EL CATÁLOGO (MIS PRODUCTOS) ---
     let prodEditId = null;
 
     window.convertirImagenABase64 = function(input) {
