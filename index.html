@@ -891,7 +891,7 @@
     const WEB_APP_URL ="https://script.google.com/macros/s/AKfycbwpm8CKeqBRptJQfu47QhR27G65py60KKlP3b-OGqp4lwv9MFEpgpLV1yxgLLf5kx0/exec"; 
     let carrito = [];
     let diasMinimosGlobal = 2; // Lo defines aquí y se usa localmente
-    let productosGlobales = []; // Ahora se llenará desde Firebase
+    let productosGlobales = []; // Ahora se llenará desde Firebase o Caché
 
     // Globales de Firebase y Panel Admin
     let db, auth, userId, appId;
@@ -929,6 +929,22 @@
 
     // --- INICIALIZACIÓN GENERAL ---
     window.onload = async function() {
+
+        // NUEVO: CACHÉ OFFLINE-FIRST (Stale-While-Revalidate)
+        // Intentamos cargar y mostrar los datos del catálogo que están guardados localmente
+        try {
+            const cacheCatalogo = localStorage.getItem('animalpro_catalogo_cache');
+            if (cacheCatalogo) {
+                const parseado = JSON.parse(cacheCatalogo);
+                if (parseado && parseado.length > 0) {
+                    productosGlobales = parseado;
+                    renderizarCatalogoPublico(); // Renderizamos instantáneamente
+                }
+            }
+        } catch (e) {
+            console.warn("No se pudo leer la caché local del catálogo.", e);
+        }
+
         try {
             const firebaseConfig = {
                 apiKey: "AIzaSyCaRUfZfwZzJ_69FAxodhQk4ehYPONOKsc",
@@ -943,13 +959,22 @@
             db = getFirestore(app);
             appId = "animalpro"; 
 
-            // Cargar el catálogo público de Firebase para TODOS (Incluso sin sesión iniciada)
+            // Cargar el catálogo público de Firebase en segundo plano
             const prodRef = collection(db, 'productos_catalogo');
             onSnapshot(prodRef, (snapshot) => {
                 productosGlobales = [];
                 snapshot.forEach(doc => {
                     productosGlobales.push({ id: doc.id, ...doc.data() });
                 });
+
+                // NUEVO: Guardar en caché lo que acaba de llegar de internet
+                try {
+                    localStorage.setItem('animalpro_catalogo_cache', JSON.stringify(productosGlobales));
+                } catch (e) {
+                    console.warn("No se pudo guardar el catálogo en la caché local.", e);
+                }
+
+                // Volvemos a renderizar para mostrar los datos más frescos
                 renderizarCatalogoPublico();
                 renderizarTablaModulo('productos');
             }, (error) => {
