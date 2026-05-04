@@ -480,6 +480,10 @@
                             <div>Impuesto: $<span id="val-imp-ventas">0</span></div>
                             <div class="grand-total">Total: $<span id="tot-ventas">0</span></div>
                         </div>
+                        <div class="admin-form-group" style="margin-top:15px;">
+                            <label>Observaciones</label>
+                            <textarea id="obs-ventas" rows="2" placeholder="Notas adicionales para esta venta..."></textarea>
+                        </div>
                         <button class="btn-admin-action btn-save-tx" id="btn-save-ventas" onclick="guardarTransaccionAdmin('ventas')">💾 Guardar e Imprimir Factura</button>
                         <button class="btn-admin-action btn-cancel-edit" id="btn-cancel-ventas" style="display:none;" onclick="cancelarEdicionAdmin('ventas')">Cancelar Edición</button>
                     </div>
@@ -572,6 +576,10 @@
                             <div>Impuesto: $<span id="val-imp-compras">0</span></div>
                             <div class="grand-total">Total: $<span id="tot-compras">0</span></div>
                         </div>
+                        <div class="admin-form-group" style="margin-top:15px;">
+                            <label>Observaciones</label>
+                            <textarea id="obs-compras" rows="2" placeholder="Notas adicionales sobre esta compra..."></textarea>
+                        </div>
                         <button class="btn-admin-action btn-save-tx" id="btn-save-compras" onclick="guardarTransaccionAdmin('compras')">💾 Guardar e Imprimir Soporte</button>
                         <button class="btn-admin-action btn-cancel-edit" id="btn-cancel-compras" style="display:none;" onclick="cancelarEdicionAdmin('compras')">Cancelar Edición</button>
                     </div>
@@ -654,6 +662,10 @@
                             <div>Impuesto: $<span id="val-imp-cotizaciones">0</span></div>
                             <div class="grand-total">Total: $<span id="tot-cotizaciones">0</span></div>
                         </div>
+                        <div class="admin-form-group" style="margin-top:15px;">
+                            <label>Observaciones</label>
+                            <textarea id="obs-cotizaciones" rows="2" placeholder="Términos, validez, notas adicionales..."></textarea>
+                        </div>
                         <button class="btn-admin-action btn-save-tx" id="btn-save-cotizaciones" onclick="guardarTransaccionAdmin('cotizaciones')">📝 Guardar y Generar PDF</button>
                         <button class="btn-admin-action btn-cancel-edit" id="btn-cancel-cotizaciones" style="display:none;" onclick="cancelarEdicionAdmin('cotizaciones')">Cancelar Edición</button>
                     </div>
@@ -705,6 +717,10 @@
                     <div class="admin-form-group">
                         <label>Monto Recibido ($)</label>
                         <input type="number" id="monto-ingresos" placeholder="0">
+                    </div>
+                    <div class="admin-form-group">
+                        <label>Observaciones</label>
+                        <textarea id="obs-ingresos" rows="2" placeholder="Detalles de consignación, banco, etc..."></textarea>
                     </div>
                     <button class="btn-admin-action" style="margin-top:20px;" onclick="guardarFinanzas('ingresos')">Registrar Ingreso</button>
                 </div>
@@ -763,6 +779,10 @@
                     <div class="admin-form-group">
                         <label>Monto Pagado ($)</label>
                         <input type="number" id="monto-egresos" placeholder="0">
+                    </div>
+                    <div class="admin-form-group">
+                        <label>Observaciones</label>
+                        <textarea id="obs-egresos" rows="2" placeholder="Número de transferencia, responsable, etc..."></textarea>
                     </div>
                     <button class="btn-admin-action" style="margin-top:20px;" onclick="guardarFinanzas('egresos')">Registrar Egreso</button>
                 </div>
@@ -1011,11 +1031,13 @@
 
     // --- INICIALIZACIÓN GENERAL ---
     window.onload = async function() {
+        let catalogoCacheHash = "";
 
         // NUEVO: CACHÉ OFFLINE-FIRST (Stale-While-Revalidate)
         try {
             const cacheCatalogo = localStorage.getItem('animalpro_catalogo_cache');
             if (cacheCatalogo) {
+                catalogoCacheHash = cacheCatalogo;
                 const parseado = JSON.parse(cacheCatalogo);
                 if (parseado && parseado.length > 0) {
                     productosGlobales = parseado;
@@ -1050,7 +1072,7 @@
             // Cargar el catálogo público y configuración de Firebase en segundo plano
             const prodRef = collection(db, 'productos_catalogo');
             onSnapshot(prodRef, (snapshot) => {
-                productosGlobales = [];
+                let productosGlobalesTMP = [];
                 let configuracion = { diasMinimos: 2, mostrarAviso: false, mensajeAviso: "" };
 
                 snapshot.forEach(docSnap => {
@@ -1058,24 +1080,32 @@
                     if (docSnap.id === '_configuracion_') {
                         configuracion = docSnap.data();
                     } else {
-                        productosGlobales.push({ id: docSnap.id, ...docSnap.data() });
+                        productosGlobalesTMP.push({ id: docSnap.id, ...docSnap.data() });
                     }
                 });
 
-                // NUEVO: Guardar en caché lo que acaba de llegar de internet
-                try {
-                    localStorage.setItem('animalpro_catalogo_cache', JSON.stringify(productosGlobales));
-                    localStorage.setItem('animalpro_config_cache', JSON.stringify(configuracion));
-                } catch (e) {
-                    console.warn("No se pudo guardar en la caché local.", e);
+                const newCatalogoHash = JSON.stringify(productosGlobalesTMP);
+
+                // NUEVO: Guardar en caché y re-renderizar SOLO si hay cambios reales (Actualización silenciosa)
+                if (newCatalogoHash !== catalogoCacheHash) {
+                    productosGlobales = productosGlobalesTMP;
+                    catalogoCacheHash = newCatalogoHash;
+                    try {
+                        localStorage.setItem('animalpro_catalogo_cache', newCatalogoHash);
+                    } catch (e) {
+                        console.warn("No se pudo guardar en la caché local.", e);
+                    }
+                    renderizarCatalogoPublico();
+                    renderizarTablaModulo('productos');
                 }
+
+                try {
+                    localStorage.setItem('animalpro_config_cache', JSON.stringify(configuracion));
+                } catch(e) {}
 
                 // Aplicar la configuración (Aviso y Días mínimos)
                 aplicarConfiguracionPublica(configuracion);
 
-                // Volvemos a renderizar para mostrar los datos más frescos
-                renderizarCatalogoPublico();
-                renderizarTablaModulo('productos');
             }, (error) => {
                 if (error.code === 'permission-denied' || (error.message && error.message.includes('permissions'))) {
                     // Solo mostramos el error de reglas si no es un aviso ya programado por el admin
@@ -2419,9 +2449,10 @@
         if(window.adminPOS[modulo].items.length === 0) return alert("Añada productos.");
         let nDoc = document.getElementById(`doc-num-${modulo}`).value.trim();
         if (!nDoc && !window.adminPOS[modulo].editId) nDoc = generarConsecutivoLocal(modulo);
+        const obs = document.getElementById(`obs-${modulo}`) ? document.getElementById(`obs-${modulo}`).value.trim() : "";
         let sub = 0, imp = 0;
         window.adminPOS[modulo].items.forEach(i => { sub += i.subtotalBase; imp += i.valorImpuesto; });
-        const transaccion = { numeroDoc: nDoc, persona, impuestoValor: imp, subtotal: sub, totalFinal: sub + imp, items: window.adminPOS[modulo].items, fecha: obtenerFechaCorta(), updatedAt: Date.now() };
+        const transaccion = { numeroDoc: nDoc, persona, observaciones: obs, impuestoValor: imp, subtotal: sub, totalFinal: sub + imp, items: window.adminPOS[modulo].items, fecha: obtenerFechaCorta(), updatedAt: Date.now() };
         const btn = document.getElementById(`btn-save-${modulo}`);
         btn.innerText = "⏳ Guardando..."; btn.disabled = true;
         try {
@@ -2441,6 +2472,7 @@
         if(!r) return;
         document.getElementById(`persona-${modulo}`).value = r.persona;
         document.getElementById(`doc-num-${modulo}`).value = r.numeroDoc || '';
+        if(document.getElementById(`obs-${modulo}`)) document.getElementById(`obs-${modulo}`).value = r.observaciones || '';
         window.adminPOS[modulo].items = [...r.items];
         window.adminPOS[modulo].editId = docId;
         calcularTotalesAdmin(modulo);
@@ -2457,6 +2489,7 @@
         document.getElementById(`btn-cancel-${modulo}`).style.display = 'none';
         document.getElementById(`persona-${modulo}`).value = '';
         document.getElementById(`doc-num-${modulo}`).value = '';
+        if(document.getElementById(`obs-${modulo}`)) document.getElementById(`obs-${modulo}`).value = '';
     }
 
     window.imprimirRegistroAdmin = function(modulo, docId) {
@@ -2521,6 +2554,10 @@
                 <div style="font-size:1.2rem; font-weight:bold; color:var(--accent); margin-top:5px;">TOTAL: $${(r.totalFinal || r.total || 0).toLocaleString(undefined, {maximumFractionDigits: 2})}</div>
             </div>
         `;
+
+        if (r.observaciones) {
+            html += `<div style="margin-top:15px; padding:10px; background:#e8f5e9; border:1px solid #c8e6c9; border-radius:8px; font-size:0.9rem; color:#1b5e20;"><b>Observaciones:</b><br>${r.observaciones}</div>`;
+        }
 
         document.getElementById('preview-body').innerHTML = html;
         
@@ -2589,6 +2626,17 @@
         doc.setFont("helvetica", "bold");
         doc.text(`TOTAL FINAL: $${(data.totalFinal || data.total || 0).toLocaleString(undefined, {maximumFractionDigits: 2})}`, 195, finalY + 25, { align: "right" });
         
+        if (data.observaciones) {
+            finalY += 35;
+            doc.setFontSize(10);
+            doc.setTextColor(50);
+            doc.setFont("helvetica", "bold");
+            doc.text("Observaciones:", 15, finalY);
+            doc.setFont("helvetica", "normal");
+            const splitObs = doc.splitTextToSize(data.observaciones, 180);
+            doc.text(splitObs, 15, finalY + 6);
+        }
+
         doc.save(`Doc_${data.numeroDoc}_${data.persona}.pdf`);
     }
 
@@ -2640,8 +2688,10 @@
         const m = parseFloat(document.getElementById(`monto-${modulo}`).value);
         if(!t || isNaN(m)) return alert("Datos faltantes.");
         let nDoc = document.getElementById(`doc-num-${modulo}`).value.trim() || generarConsecutivoLocal(modulo);
-        await addDoc(collection(db, 'artifacts', appId, 'users', userId, modulo), { createdAt: Date.now(), fecha: obtenerFechaCorta(), numeroDoc: nDoc, tercero: t, concepto: document.getElementById(`concepto-${modulo}`).value, total: m });
+        const obs = document.getElementById(`obs-${modulo}`) ? document.getElementById(`obs-${modulo}`).value.trim() : "";
+        await addDoc(collection(db, 'artifacts', appId, 'users', userId, modulo), { createdAt: Date.now(), fecha: obtenerFechaCorta(), numeroDoc: nDoc, tercero: t, concepto: document.getElementById(`concepto-${modulo}`).value, total: m, observaciones: obs });
         document.getElementById(`tercero-${modulo}`).value = ""; document.getElementById(`monto-${modulo}`).value = "";
+        if(document.getElementById(`obs-${modulo}`)) document.getElementById(`obs-${modulo}`).value = "";
     }
 
     window.borrarRegistro = async function(modulo, docId) {
