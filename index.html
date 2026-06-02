@@ -265,6 +265,13 @@
                             <div id="autocomplete-list-grupos" class="autocomplete-items"></div>
                         </div>
                     </div>
+                    <div class="admin-form-group" style="background:#eef7ff; border:1px solid #bbdefb; border-radius:10px; padding:12px; margin: 5px 0 10px 0;">
+                        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; color:#1565c0; font-size:0.95rem; margin:0;">
+                            <input type="checkbox" id="prod-es-servicio" style="width:20px; height:20px; margin:0;">
+                            <b>Marcar como servicio</b>
+                        </label>
+                        <span style="font-size:0.8rem; color:#555; margin-top:6px; display:block;">Los servicios se pueden vender sin lote, sin vencimiento y sin validar stock.</span>
+                    </div>
                     <div style="display:flex; gap:10px; flex-wrap: wrap;">
                         <div class="admin-form-group" style="flex:1; min-width: 150px;">
                             <label>Precio de Venta Actual ($)</label>
@@ -309,11 +316,12 @@
                                 <th onclick="ordenarProductos('nombre')" style="cursor:pointer;" title="Ordenar por Nombre">Nombre <span id="sort-icon-prod-nombre" style="font-size:0.8rem; margin-left:3px;">▲</span></th>
                                 <th onclick="ordenarProductos('grupo')" style="cursor:pointer;" title="Ordenar por Grupo">Grupo <span id="sort-icon-prod-grupo" style="font-size:0.8rem; margin-left:3px;"></span></th>
                                 <th onclick="ordenarProductos('precio')" style="cursor:pointer;" class="text-right" title="Ordenar por Precio">Precio Venta <span id="sort-icon-prod-precio" style="font-size:0.8rem; margin-left:3px;"></span></th>
+                                <th>Tipo</th>
                                 <th class="text-right">Acción</th>
                             </tr>
                         </thead>
                         <tbody id="tabla-productos-admin">
-                            <tr><td colspan="5" style="text-align:center; color:gray;">Cargando catálogo...</td></tr>
+                            <tr><td colspan="6" style="text-align:center; color:gray;">Cargando catálogo...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -1627,13 +1635,14 @@
         const precioOriginal = isNaN(precioOrigRaw) ? "" : precioOrigRaw;
         const descripcion = (document.getElementById('prod-desc').value || "").trim();
         const imagen = (document.getElementById('prod-img-base64').value || "").trim();
+        const esServicio = document.getElementById('prod-es-servicio') ? document.getElementById('prod-es-servicio').checked : false;
 
         if(!nombre || precio <= 0) return alert("Por favor ingresa al menos el Nombre y un Precio Venta válido.");
 
         const btn = document.getElementById('btn-guardar-prod');
         btn.disabled = true; btn.innerText = "⏳ Guardando...";
 
-        const prodData = { nombre, grupo, precio, precioOriginal, descripcion, imagen, updatedAt: Date.now() };
+        const prodData = { nombre, grupo, precio, precioOriginal, descripcion, imagen, esServicio, tipoProducto: esServicio ? 'servicio' : 'producto', updatedAt: Date.now() };
 
         try {
             if (prodEditId) {
@@ -1661,6 +1670,7 @@
         document.getElementById('prod-precio').value = prod.precio || '';
         document.getElementById('prod-precio-orig').value = prod.precioOriginal || '';
         document.getElementById('prod-desc').value = prod.descripcion || '';
+        if(document.getElementById('prod-es-servicio')) document.getElementById('prod-es-servicio').checked = esServicioProducto(prod);
         document.getElementById('prod-img-base64').value = prod.imagen || '';
         document.getElementById('prod-img-file').value = ''; 
         
@@ -1683,6 +1693,7 @@
         document.getElementById('prod-precio').value = '';
         document.getElementById('prod-precio-orig').value = '';
         document.getElementById('prod-desc').value = '';
+        if(document.getElementById('prod-es-servicio')) document.getElementById('prod-es-servicio').checked = false;
         document.getElementById('prod-img-base64').value = '';
         document.getElementById('prod-img-file').value = '';
         document.getElementById('prod-img-preview').innerHTML = '';
@@ -1737,16 +1748,28 @@
         setTimeout(() => document.getElementById('prod-precio').focus(), 300);
     };
 
+    function esServicioProducto(prod) {
+        if(!prod) return false;
+        return prod.esServicio === true || prod.tipoProducto === 'servicio' || prod.tipo === 'servicio';
+    }
+
+    function prepararSelectorServicioVentas() {
+        const select = document.getElementById('lote-ventas');
+        if(!select) return;
+        select.disabled = true;
+        select.innerHTML = '<option value="SERVICIO" selected>Servicio - no maneja lote ni stock</option>';
+    }
+
     function getKnownProducts() {
         let known = new Map();
         productosGlobales.forEach(p => {
-            known.set(p.nombre.trim().toLowerCase(), { nombre: p.nombre, precio: parseInt(p.precio) || 0 });
+            known.set(p.nombre.trim().toLowerCase(), { nombre: p.nombre, precio: parseInt(p.precio) || 0, esServicio: esServicioProducto(p), tipoProducto: esServicioProducto(p) ? 'servicio' : 'producto' });
         });
         (window.adminRecordsCache.ventas || []).forEach(venta => {
             (venta.items || []).forEach(item => {
                 let key = item.nombre.trim().toLowerCase();
                 if (!known.has(key) || known.get(key).precio === 0) {
-                    known.set(key, { nombre: item.nombre, precio: parseInt(item.precio) || 0 });
+                    known.set(key, { nombre: item.nombre, precio: parseInt(item.precio) || 0, esServicio: item.esServicio === true, tipoProducto: item.esServicio === true ? 'servicio' : 'producto' });
                 }
             });
         });
@@ -1754,7 +1777,7 @@
             (compra.items || []).forEach(item => {
                 let key = item.nombre.trim().toLowerCase();
                 if (!known.has(key)) {
-                    known.set(key, { nombre: item.nombre, precio: 0 });
+                    known.set(key, { nombre: item.nombre, precio: 0, esServicio: item.esServicio === true, tipoProducto: item.esServicio === true ? 'servicio' : 'producto' });
                 }
             });
         });
@@ -1800,6 +1823,8 @@
                         grupo: 'NO PUBLICADO',
                         precio: kp.precio || 0,
                         imagen: '',
+                        esServicio: kp.esServicio === true,
+                        tipoProducto: kp.esServicio === true ? 'servicio' : 'producto',
                         isPublished: false
                     });
                     knownNames.add(normName);
@@ -1869,12 +1894,15 @@
             let tr = document.createElement('tr');
             if (modulo === 'productos') {
                 let img = r.imagen && r.imagen.trim() !== "" ? `<img src="${r.imagen}" style="width:40px; height:40px; object-fit:cover; border-radius:5px;">` : '🖼️';
+                const tipoBadge = esServicioProducto(r) 
+                    ? `<span style="background:#e3f2fd; color:#1565c0; padding:3px 8px; border-radius:5px; font-size:0.8rem; font-weight:bold;">Servicio</span>` 
+                    : `<span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:5px; font-size:0.8rem; font-weight:bold;">Producto</span>`;
                 if (r.isPublished) {
-                    tr.innerHTML = `<td>${img}</td><td><strong>${r.nombre}</strong> <span style="color:var(--primary); font-size:0.75rem; font-weight:bold; margin-left:5px;">(Público)</span></td><td><span style="background:#eee; padding:3px 8px; border-radius:5px; font-size:0.8rem;">${r.grupo || 'GENERAL'}</span></td><td class="text-right" style="color:var(--accent); font-weight:bold;">$${parseInt(r.precio || 0).toLocaleString()}</td><td class="text-right"><button class="btn-table-action" title="Editar" onclick="editarProductoCatalogo('${r.id}')">✏️</button><button class="btn-table-action" style="color:red;" title="Borrar" onclick="borrarProductoCatalogo('${r.id}')">✖</button></td>`;
+                    tr.innerHTML = `<td>${img}</td><td><strong>${r.nombre}</strong> <span style="color:var(--primary); font-size:0.75rem; font-weight:bold; margin-left:5px;">(Público)</span></td><td><span style="background:#eee; padding:3px 8px; border-radius:5px; font-size:0.8rem;">${r.grupo || 'GENERAL'}</span></td><td class="text-right" style="color:var(--accent); font-weight:bold;">$${parseInt(r.precio || 0).toLocaleString()}</td><td>${tipoBadge}</td><td class="text-right"><button class="btn-table-action" title="Editar" onclick="editarProductoCatalogo('${r.id}')">✏️</button><button class="btn-table-action" style="color:red;" title="Borrar" onclick="borrarProductoCatalogo('${r.id}')">✖</button></td>`;
                 } else {
                     let nombreAtributo = r.nombre.replace(/"/g, '&quot;');
                     tr.style.background = "#fff8e1"; 
-                    tr.innerHTML = `<td>${img}</td><td><strong>${r.nombre}</strong> <span style="color:var(--warning); font-size:0.75rem; font-weight:bold; margin-left:5px;">(Oculto)</span></td><td><span style="background:#ffe0b2; color:#e65100; padding:3px 8px; border-radius:5px; font-size:0.8rem; font-weight:bold;">${r.grupo}</span></td><td class="text-right" style="color:gray;">$${parseInt(r.precio || 0).toLocaleString()}</td><td class="text-right"><button class="btn-table-action" style="background:var(--primary); color:white; padding:4px 8px; border-radius:5px; font-size:0.85rem; font-weight:bold; cursor:pointer;" onclick="prepararNuevoProducto(this.getAttribute('data-nombre'))" data-nombre="${nombreAtributo}" title="Crear en el Catálogo">➕ Publicar</button></td>`;
+                    tr.innerHTML = `<td>${img}</td><td><strong>${r.nombre}</strong> <span style="color:var(--warning); font-size:0.75rem; font-weight:bold; margin-left:5px;">(Oculto)</span></td><td><span style="background:#ffe0b2; color:#e65100; padding:3px 8px; border-radius:5px; font-size:0.8rem; font-weight:bold;">${r.grupo}</span></td><td class="text-right" style="color:gray;">$${parseInt(r.precio || 0).toLocaleString()}</td><td>${tipoBadge}</td><td class="text-right"><button class="btn-table-action" style="background:var(--primary); color:white; padding:4px 8px; border-radius:5px; font-size:0.85rem; font-weight:bold; cursor:pointer;" onclick="prepararNuevoProducto(this.getAttribute('data-nombre'))" data-nombre="${nombreAtributo}" title="Crear en el Catálogo">➕ Publicar</button></td>`;
                 }
             } else if (modulo === 'terceros') {
                 tr.innerHTML = `<td><strong>${r.nombre}</strong></td><td>${r.documento || '-'}</td><td>${r.telefono || '-'}</td><td class="text-right"><button class="btn-table-action" style="color:red;" onclick="borrarRegistro('${modulo}', '${r.id}')" title="Borrar">✖</button></td>`;
@@ -1958,6 +1986,10 @@
             if (!val) { 
                 const precioInput = document.getElementById(`precio-${modulo}`);
                 if (precioInput) precioInput.value = ""; 
+                if (modulo === 'ventas') {
+                    const loteSelect = document.getElementById('lote-ventas');
+                    if(loteSelect) { loteSelect.disabled = false; loteSelect.innerHTML = '<option value="">-- Seleccione un producto primero --</option>'; }
+                }
                 return false; 
             }
             
@@ -1982,8 +2014,12 @@
                 
                 let stockHtml = "";
                 if(modulo === 'ventas' || modulo === 'compras') {
-                    let totalStock = invActual.filter(i => i.nombre.trim().toLowerCase() === p.nombre.trim().toLowerCase() && i.stock > 0).reduce((sum, i) => sum + i.stock, 0);
-                    stockHtml = `<div style="font-size:0.8rem; margin-top:3px; color:${totalStock > 0 ? 'var(--accent)' : 'red'}">Total disponible: <b>${totalStock}</b> unid.</div>`;
+                    if(esServicioProducto(p)) {
+                        stockHtml = `<div style="font-size:0.8rem; margin-top:3px; color:var(--info); font-weight:bold;">Servicio: no maneja stock ni lote</div>`;
+                    } else {
+                        let totalStock = invActual.filter(i => i.nombre.trim().toLowerCase() === p.nombre.trim().toLowerCase() && i.stock > 0).reduce((sum, i) => sum + i.stock, 0);
+                        stockHtml = `<div style="font-size:0.8rem; margin-top:3px; color:${totalStock > 0 ? 'var(--accent)' : 'red'}">Total disponible: <b>${totalStock}</b> unid.</div>`;
+                    }
                 }
 
                 divItem.innerHTML = `<div style="flex-grow:1;"><span><strong>${p.nombre}</strong></span>${stockHtml}</div> <span style="color:var(--accent); font-weight:bold; padding-left:10px;">$${parseInt(p.precio || 0).toLocaleString()}</span>`;
@@ -2000,7 +2036,8 @@
                     listContainer.innerHTML = "";
                     
                     if (modulo === 'ventas') {
-                        actualizarLotesDisponibles(p.nombre);
+                        if(esServicioProducto(p)) prepararSelectorServicioVentas();
+                        else actualizarLotesDisponibles(p.nombre);
                     }
                     input.blur();
                 });
@@ -2016,6 +2053,10 @@
                     evt.preventDefault();
                     input.value = val;
                     input.setAttribute("data-new-product", "true");
+                    if (modulo === 'ventas') {
+                        const loteSelect = document.getElementById('lote-ventas');
+                        if(loteSelect) { loteSelect.disabled = false; loteSelect.innerHTML = '<option value="">-- Producto nuevo: requiere lote si maneja stock --</option>'; }
+                    }
                     listContainer.innerHTML = "";
                     input.blur();
                 });
@@ -2041,6 +2082,10 @@
                             alert("⚠️ Producto no válido. Por favor, selecciona un producto del catálogo de la lista o haz clic en '➕ Usar como producto nuevo'.");
                         } else {
                             this.value = exactMatch.nombre; 
+                            if (modulo === 'ventas') {
+                                if(esServicioProducto(exactMatch)) prepararSelectorServicioVentas();
+                                else actualizarLotesDisponibles(exactMatch.nombre);
+                            }
                         }
                     }
                 }
@@ -2354,6 +2399,7 @@
 
     window.actualizarLotesDisponibles = function(nombreProd) {
         const select = document.getElementById('lote-ventas');
+        select.disabled = false;
         select.innerHTML = '<option value="">-- Seleccione Lote --</option>';
         const inventario = calcularInventarioGlobal();
         const lotesDelProd = inventario.filter(i => i.nombre.trim().toLowerCase() === nombreProd.trim().toLowerCase() && i.stock > 0);
@@ -2390,6 +2436,10 @@
         const impPerc = parseFloat(impInput.value) || 0;
         const cant = parseInt(cantInput.value);
         if(!nombre || isNaN(precio) || isNaN(cant) || cant <= 0) return alert("Complete los datos válidos.");
+
+        const productoConocido = getKnownProducts().find(p => p.nombre.trim().toLowerCase() === nombre.trim().toLowerCase());
+        const esServicio = esServicioProducto(productoConocido);
+
         let lote = "N/A";
         let vencimiento = "-";
         if (modulo === 'compras') {
@@ -2397,23 +2447,32 @@
             vencimiento = document.getElementById('venc-compras').value;
             if(!lote || !vencimiento) return alert("Lote y vencimiento obligatorios.");
         } else if (modulo === 'ventas') {
-            const loteSelect = document.getElementById('lote-ventas');
-            if (loteSelect.selectedIndex <= 0) return alert("Seleccione un lote.");
-            const opt = loteSelect.options[loteSelect.selectedIndex];
-            lote = opt.value;
-            vencimiento = opt.getAttribute('data-venc');
-            let stock = parseInt(opt.getAttribute('data-stock'));
-            let enCart = 0;
-            window.adminPOS.ventas.items.forEach(i => { if (i.nombre.trim().toLowerCase() === nombre.trim().toLowerCase() && i.lote === lote) enCart += i.cant; });
-            if (cant + enCart > stock && !window.adminPOS.ventas.editId) return alert("Stock insuficiente.");
+            if (esServicio) {
+                lote = "SERVICIO";
+                vencimiento = "-";
+            } else {
+                const loteSelect = document.getElementById('lote-ventas');
+                if (loteSelect.selectedIndex <= 0) return alert("Seleccione un lote.");
+                const opt = loteSelect.options[loteSelect.selectedIndex];
+                lote = opt.value;
+                vencimiento = opt.getAttribute('data-venc');
+                let stock = parseInt(opt.getAttribute('data-stock'));
+                let enCart = 0;
+                window.adminPOS.ventas.items.forEach(i => { if (i.nombre.trim().toLowerCase() === nombre.trim().toLowerCase() && i.lote === lote) enCart += i.cant; });
+                if (cant + enCart > stock && !window.adminPOS.ventas.editId) return alert("Stock insuficiente.");
+            }
         }
         const subBase = precio * cant;
         const valImp = subBase * (impPerc / 100);
         const subTot = subBase + valImp;
-        window.adminPOS[modulo].items.push({ id: Date.now(), nombre, precio, cant, impPerc, valorImpuesto: valImp, subtotalBase: subBase, subtotal: subTot, lote, vencimiento });
+        window.adminPOS[modulo].items.push({ id: Date.now(), nombre, precio, cant, impPerc, valorImpuesto: valImp, subtotalBase: subBase, subtotal: subTot, lote, vencimiento, esServicio });
         productoInput.value = ""; precioInput.value = ""; cantInput.value = 1; impInput.value = 0;
         if(modulo === 'compras') { document.getElementById('lote-compras').value = ""; document.getElementById('venc-compras').value = ""; }
-        if(modulo === 'ventas') { document.getElementById('lote-ventas').innerHTML = '<option value="">-- Seleccione un producto primero --</option>'; }
+        if(modulo === 'ventas') { 
+            const loteSelect = document.getElementById('lote-ventas');
+            loteSelect.disabled = false;
+            loteSelect.innerHTML = '<option value="">-- Seleccione un producto primero --</option>'; 
+        }
         calcularTotalesAdmin(modulo);
     }
 
@@ -2432,7 +2491,7 @@
             let bImp = item.valorImpuesto || 0;
             subGral += bBase;
             impTot += bImp;
-            let colLote = (modulo !== 'cotizaciones') ? `<td style="font-size:0.8rem; color:#666;">${item.lote || '-'}</td>` : `<td>-</td>`;
+            let colLote = (modulo !== 'cotizaciones') ? `<td style="font-size:0.8rem; color:#666;">${item.esServicio ? 'Servicio' : (item.lote || '-')}</td>` : `<td>-</td>`;
             tbody.innerHTML += `<tr><td style="font-size:0.85rem;">${item.nombre}</td>${colLote}<td>${item.cant}</td><td>$${bBase.toLocaleString()}</td><td style="font-weight:bold;">$${item.subtotal.toLocaleString(undefined, {maximumFractionDigits: 2})}</td><td><button style="color:red; background:none; border:none; cursor:pointer;" onclick="eliminarItemAdmin('${modulo}', ${item.id})">✖</button></td></tr>`;
         });
         document.getElementById(`sub-${modulo}`).innerText = subGral.toLocaleString(undefined, {maximumFractionDigits: 2});
@@ -2473,7 +2532,10 @@
         document.getElementById(`persona-${modulo}`).value = r.persona;
         document.getElementById(`doc-num-${modulo}`).value = r.numeroDoc || '';
         if(document.getElementById(`obs-${modulo}`)) document.getElementById(`obs-${modulo}`).value = r.observaciones || '';
-        window.adminPOS[modulo].items = [...r.items];
+        window.adminPOS[modulo].items = [...r.items].map(item => {
+            const prod = getKnownProducts().find(p => p.nombre.trim().toLowerCase() === (item.nombre || '').trim().toLowerCase());
+            return { ...item, esServicio: item.esServicio === true || esServicioProducto(prod) || item.lote === 'SERVICIO' };
+        });
         window.adminPOS[modulo].editId = docId;
         calcularTotalesAdmin(modulo);
         document.getElementById(`badge-edit-${modulo}`).style.display = 'inline-block';
@@ -2537,7 +2599,7 @@
             html += `<tr>
                 <td style="padding:8px 5px; border-bottom:1px solid #eee;">
                     <strong>${i.nombre}</strong><br>
-                    <span style="color:#777; font-size:0.75rem;">Lote: ${i.lote || 'N/A'} | Venc: ${i.vencimiento || '-'} | $${i.precio.toLocaleString()} c/u</span>
+                    <span style="color:#777; font-size:0.75rem;">${i.esServicio ? 'Servicio sin control de stock' : `Lote: ${i.lote || 'N/A'} | Venc: ${i.vencimiento || '-'}`} | $${i.precio.toLocaleString()} c/u</span>
                 </td>
                 <td style="padding:8px 5px; border-bottom:1px solid #eee; text-align:center;">${i.cant}</td>
                 <td style="padding:8px 5px; border-bottom:1px solid #eee; text-align:right;">$${i.subtotal.toLocaleString(undefined, {maximumFractionDigits: 2})}</td>
@@ -2603,7 +2665,7 @@
         doc.text(`Tercero: ${data.persona}`, 15, 57);
         doc.text(`N° Doc: ${data.numeroDoc || 'N/A'}`, 15, 64);
         
-        const bodyData = data.items.map(i => [i.nombre, i.lote || 'N/A', i.cant.toString(), `$${i.precio.toLocaleString()}`, `${i.impPerc}%`, `$${i.subtotal.toLocaleString()}`]);
+        const bodyData = data.items.map(i => [i.nombre, i.esServicio ? 'SERVICIO' : (i.lote || 'N/A'), i.cant.toString(), `$${i.precio.toLocaleString()}`, `${i.impPerc}%`, `$${i.subtotal.toLocaleString()}`]);
         doc.autoTable({ 
             startY: 70, 
             head: [['Producto', 'Lote', 'Cant.', 'Precio', 'Imp(%)', 'Total']], 
@@ -2642,7 +2704,7 @@
 
     window.descargarPlantillaExcel = function() {
         const wb = XLSX.utils.book_new();
-        let wsData = (moduloImportacion === 'terceros') ? [["NOMBRE_COMPLETO", "DOCUMENTO_NIT", "TELEFONO"], ["Juan Perez", "12345", "300123"]] : (moduloImportacion === 'productos' ? [["Nombre", "Grupo", "Precio", "Precio Anterior", "descripcion", "Imagen Base64"], ["Ejemplo", "General", 50, 60, "Desc", ""]] : [["FECHA (DD/MM/YYYY)", "N° DOCUMENTO", "CLIENTE_PROVEEDOR", "PRODUCTO", "LOTE", "VENCIMIENTO (YYYY-MM-DD)", "CANTIDAD", "PRECIO_UNITARIO", "IMPUESTO_PORCENTAJE"], [obtenerFechaCorta(), "001", "Tercero", "Prod", "L1", "2025-01-01", 1, 10, 0]]);
+        let wsData = (moduloImportacion === 'terceros') ? [["NOMBRE_COMPLETO", "DOCUMENTO_NIT", "TELEFONO"], ["Juan Perez", "12345", "300123"]] : (moduloImportacion === 'productos' ? [["Nombre", "Grupo", "Precio", "Precio Anterior", "Tipo", "descripcion", "Imagen Base64"], ["Ejemplo producto", "General", 50, 60, "producto", "Desc", ""], ["Ejemplo servicio", "Servicios", 80000, "", "servicio", "Mano de obra, consulta o asesoría", ""]] : [["FECHA (DD/MM/YYYY)", "N° DOCUMENTO", "CLIENTE_PROVEEDOR", "PRODUCTO", "LOTE", "VENCIMIENTO (YYYY-MM-DD)", "CANTIDAD", "PRECIO_UNITARIO", "IMPUESTO_PORCENTAJE"], [obtenerFechaCorta(), "001", "Tercero", "Prod", "L1", "2025-01-01", 1, 10, 0]]);
         const ws = XLSX.utils.aoa_to_sheet(wsData);
         XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
         XLSX.writeFile(wb, `Plantilla_${moduloImportacion}.xlsx`);
@@ -2667,7 +2729,9 @@
                         let n = row["Nombre"] || row["NOMBRE"];
                         let p = limpiarNumero(row["Precio"] || row["PRECIO"]);
                         if(!n || isNaN(p)) continue;
-                        await addDoc(collection(db, 'productos_catalogo'), { nombre: n, grupo: row["Grupo"] || "GENERAL", precio: p, descripcion: row["descripcion"] || "", imagen: row["Imagen Base64"] || "", createdAt: Date.now() });
+                        const tipoExcel = ((row["Tipo"] || row["TIPO"] || "producto") + "").trim().toLowerCase();
+                        const esServicioExcel = tipoExcel.includes("servicio");
+                        await addDoc(collection(db, 'productos_catalogo'), { nombre: n, grupo: row["Grupo"] || "GENERAL", precio: p, precioOriginal: limpiarNumero(row["Precio Anterior"] || row["PRECIO_ANTERIOR"]) || "", descripcion: row["descripcion"] || row["Descripcion"] || "", imagen: row["Imagen Base64"] || "", esServicio: esServicioExcel, tipoProducto: esServicioExcel ? 'servicio' : 'producto', createdAt: Date.now() });
                     } else if (moduloImportacion === 'terceros') {
                         let n = row["NOMBRE_COMPLETO"]; if(!n) continue;
                         await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'terceros'), { nombre: n, documento: row["DOCUMENTO_NIT"] || "", telefono: row["TELEFONO"] || "", createdAt: Date.now() });
