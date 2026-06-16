@@ -943,7 +943,8 @@
         </div>
         <div class="admin-form-group">
             <label>Grupo / Categoría</label>
-            <input type="text" id="mnp-grupo" placeholder="Ej: GENERAL, Medicamentos, Servicios">
+            <input type="text" id="mnp-grupo" class="autocomplete-input" placeholder="Ej: GENERAL, Medicamentos, Servicios" autocomplete="off">
+            <div id="autocomplete-list-grupos-rapido" class="autocomplete-items"></div>
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <div class="admin-form-group" style="flex:1; min-width:140px;">
@@ -2088,28 +2089,39 @@
     };
 
     function configurarAutocompleteGrupos() {
-        const input = document.getElementById('prod-grupo');
-        const listContainer = document.getElementById('autocomplete-list-grupos');
+        configurarAutocompleteGrupoInput('prod-grupo', 'autocomplete-list-grupos');
+        configurarAutocompleteGrupoInput('mnp-grupo', 'autocomplete-list-grupos-rapido');
+    }
+
+    function configurarAutocompleteGrupoInput(inputId, listContainerId) {
+        const input = document.getElementById(inputId);
+        const listContainer = document.getElementById(listContainerId);
         if(!input || !listContainer) return;
+
+        // Evita duplicar eventos si el usuario entra/sale del panel o se refresca Firebase.
+        if (input.dataset.autocompleteGruposActivo === 'true') return;
+        input.dataset.autocompleteGruposActivo = 'true';
         
         input.addEventListener("input", function(e) {
             let val = this.value.trim(); 
             listContainer.innerHTML = ""; 
-            if (!val) return false; 
             
             let knownGroups = new Set();
             productosGlobales.forEach(p => {
                 if(p.grupo && p.grupo.trim() !== "") knownGroups.add(p.grupo.trim());
             });
-            let groupsArray = Array.from(knownGroups);
+            let groupsArray = Array.from(knownGroups).sort((a, b) => a.localeCompare(b));
 
-            let matches = groupsArray.filter(g => g.toLowerCase().includes(val.toLowerCase()));
+            // Si está vacío, igual muestra los grupos existentes para poder escoger rápido.
+            let matches = val
+                ? groupsArray.filter(g => g.toLowerCase().includes(val.toLowerCase()))
+                : groupsArray.slice(0, 12);
             let matchExacto = false;
 
             matches.forEach(g => {
                 let divItem = document.createElement("div");
                 divItem.innerHTML = `<span><strong>${g}</strong></span>`;
-                if(g.toLowerCase() === val.toLowerCase()) matchExacto = true;
+                if(val && g.toLowerCase() === val.toLowerCase()) matchExacto = true;
                 
                 divItem.addEventListener("mousedown", function(evt) {
                     evt.preventDefault(); 
@@ -2120,7 +2132,7 @@
                 listContainer.appendChild(divItem);
             });
 
-            if (!matchExacto) {
+            if (val && !matchExacto) {
                 let divAdd = document.createElement("div");
                 divAdd.style.backgroundColor = "#e8f5e9";
                 divAdd.innerHTML = `<span style="color:var(--primary); font-weight:bold;">➕ Crear grupo: "${val}"</span>`;
@@ -2133,6 +2145,11 @@
                 });
                 listContainer.appendChild(divAdd);
             }
+        });
+
+        input.addEventListener("focus", function() {
+            // Al abrir el modal rápido, permite ver los grupos guardados sin escribir.
+            this.dispatchEvent(new Event('input'));
         });
 
         input.addEventListener("blur", function() {
