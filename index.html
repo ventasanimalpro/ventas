@@ -928,6 +928,50 @@
     </div>
 </div>
 
+
+
+<!-- NUEVO: MODAL PRODUCTO RÁPIDO DESDE VENTAS / COMPRAS -->
+<div id="modal-nuevo-producto-rapido" class="modal-overlay">
+    <div class="modal-content">
+        <h2 style="margin-top:0; color: var(--accent);">Nuevo Producto</h2>
+        <p style="color:#666; font-size:0.9rem; margin-top:0;">Se guardará en <b>Mis Productos</b> sin salir del módulo actual.</p>
+        
+        <input type="hidden" id="mnp-modulo-origen">
+        <div class="admin-form-group">
+            <label>Nombre del Producto</label>
+            <input type="text" id="mnp-nombre" placeholder="Nombre del producto">
+        </div>
+        <div class="admin-form-group">
+            <label>Grupo / Categoría</label>
+            <input type="text" id="mnp-grupo" placeholder="Ej: GENERAL, Medicamentos, Servicios">
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <div class="admin-form-group" style="flex:1; min-width:140px;">
+                <label>Precio de Venta ($)</label>
+                <input type="number" id="mnp-precio" placeholder="Obligatorio">
+            </div>
+            <div class="admin-form-group" style="flex:1; min-width:140px;">
+                <label>Precio Anterior ($)</label>
+                <input type="number" id="mnp-precio-orig" placeholder="Opcional">
+            </div>
+        </div>
+        <div class="admin-form-group">
+            <label>Descripción corta</label>
+            <input type="text" id="mnp-desc" placeholder="Opcional">
+        </div>
+        <div class="admin-form-group" style="background:#eef7ff; border:1px solid #bbdefb; border-radius:10px; padding:12px; margin-top:8px;">
+            <label style="display:flex; align-items:center; gap:10px; cursor:pointer; color:#1565c0; font-size:0.95rem; margin:0;">
+                <input type="checkbox" id="mnp-es-servicio" style="width:20px; height:20px; margin:0;">
+                <b>Marcar como servicio</b>
+            </label>
+            <span style="font-size:0.8rem; color:#555; margin-top:6px; display:block;">Los servicios se venden sin lote, sin vencimiento y sin validar stock.</span>
+        </div>
+        
+        <button class="btn-enviar" id="btn-guardar-producto-rapido" onclick="guardarProductoRapidoDesdeModal()">GUARDAR EN MIS PRODUCTOS</button>
+        <button style="background:none; border:none; color:grey; width:100%; margin-top:15px; cursor:pointer;" onclick="cerrarModalNuevoProductoRapido()">Cancelar</button>
+    </div>
+</div>
+
 <!-- MODAL PREVISUALIZAR TRANSACCIÓN -->
 <div id="modal-preview" class="modal-overlay">
     <div class="modal-content" style="max-width: 500px;">
@@ -1578,6 +1622,10 @@
 
     // --- FUNCIONES PARA GESTIONAR EL CATÁLOGO (MIS PRODUCTOS) ---
     let prodEditId = null;
+    // Guarda desde qué módulo del POS se pidió crear el producto (ventas, compras o cotizaciones)
+    // para volver allí automáticamente cuando se guarde.
+    let productoOrigenModulo = null;
+    let productoNombreCreadoPOS = "";
 
     window.convertirImagenABase64 = function(input) {
         const file = input.files[0];
@@ -1651,8 +1699,31 @@
                 prodData.createdAt = Date.now();
                 await addDoc(collection(db, 'productos_catalogo'), prodData);
             }
-            alert("Producto guardado correctamente en tu catálogo.");
+            const moduloRetorno = productoOrigenModulo;
+            const nombreRetorno = nombre;
+            const precioRetorno = precio;
+            const esServicioRetorno = esServicio;
+
             cancelarEdicionProducto();
+
+            // Si el producto se creó desde ventas/compras/cotizaciones, vuelve al módulo y deja el producto seleccionado.
+            if (moduloRetorno && ['ventas', 'compras', 'cotizaciones'].includes(moduloRetorno)) {
+                const tabDestino = Array.from(document.querySelectorAll('.admin-tab'))
+                    .find(t => (t.getAttribute('onclick') || '').includes(`'${moduloRetorno}'`));
+                if(tabDestino) cambiarModulo(moduloRetorno, tabDestino);
+
+                const inputDestino = document.getElementById(`busqueda-prod-${moduloRetorno}`);
+                const precioDestino = document.getElementById(`precio-${moduloRetorno}`);
+                if(inputDestino) inputDestino.value = nombreRetorno;
+                if(precioDestino && !precioDestino.value) precioDestino.value = precioRetorno;
+
+                if (moduloRetorno === 'ventas') {
+                    if(esServicioRetorno) prepararSelectorServicioVentas();
+                    else actualizarLotesDisponibles(nombreRetorno);
+                }
+            }
+
+            alert("Producto guardado correctamente en tu catálogo.");
         } catch (e) {
             console.error(e); alert("Error al guardar en base de datos.");
         } finally {
@@ -1688,6 +1759,8 @@
 
     window.cancelarEdicionProducto = function() {
         prodEditId = null;
+        productoOrigenModulo = null;
+        productoNombreCreadoPOS = "";
         document.getElementById('prod-nombre').value = '';
         document.getElementById('prod-grupo').value = '';
         document.getElementById('prod-precio').value = '';
@@ -1729,24 +1802,118 @@
         } catch (e) { alert("Error eliminando producto."); }
     }
     
-    window.prepararNuevoProducto = function(nombre) {
-        const tabs = Array.from(document.querySelectorAll('.admin-tab'));
-        const tabProductos = tabs.find(t => t.textContent.includes('Mis Productos'));
-        if(tabProductos) cambiarModulo('productos', tabProductos);
-        
-        cancelarEdicionProducto(); 
-        const nombreReal = nombre.replace(/&quot;/g, '"');
-        document.getElementById('prod-nombre').value = nombreReal;
+    window.prepararNuevoProducto = function(nombre, origenModulo = null) {
+        // Ahora NO cambia de módulo: abre una ventana rápida encima de Ventas/Compras/Cotizaciones.
+        abrirModalNuevoProductoRapido(nombre, origenModulo);
+    };
 
+    window.abrirModalNuevoProductoRapido = function(nombreSug, origenModulo = null) {
+        const nombreReal = (nombreSug || '').toString().replace(/&quot;/g, '"');
+        document.getElementById('mnp-modulo-origen').value = origenModulo || '';
+        document.getElementById('mnp-nombre').value = nombreReal;
+        document.getElementById('mnp-grupo').value = 'GENERAL';
+        document.getElementById('mnp-precio-orig').value = '';
+        document.getElementById('mnp-desc').value = '';
+        document.getElementById('mnp-es-servicio').checked = false;
+
+        let precioSugerido = '';
         let knownProducts = getKnownProducts();
         let kp = knownProducts.find(p => p.nombre.trim().toLowerCase() === nombreReal.trim().toLowerCase());
         if (kp && kp.precio > 0) {
-             document.getElementById('prod-precio').value = kp.precio;
+            precioSugerido = kp.precio;
+        } else if (origenModulo) {
+            const precioOrigen = document.getElementById(`precio-${origenModulo}`);
+            if(precioOrigen && precioOrigen.value) precioSugerido = precioOrigen.value;
+        }
+        document.getElementById('mnp-precio').value = precioSugerido;
+
+        document.getElementById('modal-nuevo-producto-rapido').style.display = 'flex';
+        setTimeout(() => {
+            const precioInput = document.getElementById('mnp-precio');
+            if(precioInput && !precioInput.value) precioInput.focus();
+            else document.getElementById('mnp-nombre').focus();
+        }, 100);
+    };
+
+    window.cerrarModalNuevoProductoRapido = function() {
+        document.getElementById('modal-nuevo-producto-rapido').style.display = 'none';
+        document.getElementById('mnp-modulo-origen').value = '';
+    };
+
+    function seleccionarProductoEnModuloPOS(modulo, nombre, precio, esServicio) {
+        if(!modulo || !['ventas', 'compras', 'cotizaciones'].includes(modulo)) return;
+
+        const inputDestino = document.getElementById(`busqueda-prod-${modulo}`);
+        const precioDestino = document.getElementById(`precio-${modulo}`);
+        if(inputDestino) inputDestino.value = nombre;
+        if(precioDestino) precioDestino.value = precio;
+
+        if (modulo === 'ventas') {
+            if(esServicio) prepararSelectorServicioVentas();
+            else actualizarLotesDisponibles(nombre);
+        }
+    }
+
+    window.guardarProductoRapidoDesdeModal = async function() {
+        if(!userId) return alert("Error de autenticación.");
+
+        const moduloOrigen = document.getElementById('mnp-modulo-origen').value;
+        const nombre = (document.getElementById('mnp-nombre').value || '').trim();
+        const grupo = (document.getElementById('mnp-grupo').value || '').trim() || 'GENERAL';
+        const precioRaw = parseFloat(document.getElementById('mnp-precio').value);
+        const precio = isNaN(precioRaw) ? 0 : precioRaw;
+        const precioOrigRaw = parseFloat(document.getElementById('mnp-precio-orig').value);
+        const precioOriginal = isNaN(precioOrigRaw) ? "" : precioOrigRaw;
+        const descripcion = (document.getElementById('mnp-desc').value || '').trim();
+        const esServicio = document.getElementById('mnp-es-servicio').checked;
+
+        if(!nombre || precio <= 0) return alert("Ingresa el nombre y un precio de venta válido.");
+
+        const duplicado = productosGlobales.find(p => (p.nombre || '').trim().toLowerCase() === nombre.toLowerCase());
+        if(duplicado) {
+            seleccionarProductoEnModuloPOS(moduloOrigen, duplicado.nombre, parseFloat(duplicado.precio) || precio, esServicioProducto(duplicado));
+            cerrarModalNuevoProductoRapido();
+            return alert("Ese producto ya existía en Mis Productos. Lo dejé seleccionado en el módulo actual.");
         }
 
-        document.getElementById('mod-productos').scrollIntoView({ behavior: 'smooth' });
-        setTimeout(() => document.getElementById('prod-precio').focus(), 300);
-    };
+        const btn = document.getElementById('btn-guardar-producto-rapido');
+        btn.disabled = true;
+        btn.innerText = "⏳ GUARDANDO...";
+
+        const prodData = {
+            nombre,
+            grupo,
+            precio,
+            precioOriginal,
+            descripcion,
+            imagen: '',
+            esServicio,
+            tipoProducto: esServicio ? 'servicio' : 'producto',
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+        };
+
+        try {
+            const docRef = await addDoc(collection(db, 'productos_catalogo'), prodData);
+
+            // Actualización local inmediata para poder usarlo sin esperar el onSnapshot de Firebase.
+            productosGlobales.push({ id: docRef.id, ...prodData });
+            try { localStorage.setItem('animalpro_catalogo_cache', JSON.stringify(productosGlobales)); } catch(e) {}
+
+            renderizarCatalogoPublico();
+            renderizarTablaModulo('productos');
+            seleccionarProductoEnModuloPOS(moduloOrigen, nombre, precio, esServicio);
+            cerrarModalNuevoProductoRapido();
+
+            alert("✅ Producto guardado en Mis Productos y seleccionado aquí mismo.");
+        } catch (e) {
+            console.error(e);
+            alert("Error al guardar el producto en Mis Productos.");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "GUARDAR EN MIS PRODUCTOS";
+        }
+    }
 
     function esServicioProducto(prod) {
         if(!prod) return false;
@@ -2047,18 +2214,24 @@
             if (!matchExacto) {
                 let divAdd = document.createElement("div");
                 divAdd.style.backgroundColor = "#e8f5e9";
-                divAdd.innerHTML = `<span style="color:var(--primary); font-weight:bold;">➕ Usar "${val}" como producto nuevo</span>`;
+                divAdd.innerHTML = `<span style="color:var(--primary); font-weight:bold;">➕ Crear aquí y guardar "${val}"</span>`;
                 
                 divAdd.addEventListener("mousedown", function(evt) {
                     evt.preventDefault();
-                    input.value = val;
-                    input.setAttribute("data-new-product", "true");
+                    const nombreNuevo = val;
+                    listContainer.innerHTML = "";
+                    input.value = "";
+                    input.removeAttribute("data-new-product");
+
+                    const precioInput = document.getElementById(`precio-${modulo}`);
+                    if (precioInput) precioInput.value = "";
+
                     if (modulo === 'ventas') {
                         const loteSelect = document.getElementById('lote-ventas');
-                        if(loteSelect) { loteSelect.disabled = false; loteSelect.innerHTML = '<option value="">-- Producto nuevo: requiere lote si maneja stock --</option>'; }
+                        if(loteSelect) { loteSelect.disabled = false; loteSelect.innerHTML = '<option value="">-- Seleccione un producto primero --</option>'; }
                     }
-                    listContainer.innerHTML = "";
-                    input.blur();
+
+                    prepararNuevoProducto(nombreNuevo, modulo);
                 });
                 listContainer.appendChild(divAdd);
             } else {
@@ -2079,7 +2252,7 @@
                             this.value = ""; 
                             const precioInput = document.getElementById(`precio-${modulo}`);
                             if(precioInput) precioInput.value = "";
-                            alert("⚠️ Producto no válido. Por favor, selecciona un producto del catálogo de la lista o haz clic en '➕ Usar como producto nuevo'.");
+                            alert("⚠️ Producto no válido. Por favor, selecciona un producto del catálogo de la lista o haz clic en '➕ Crear en Mis Productos'.");
                         } else {
                             this.value = exactMatch.nombre; 
                             if (modulo === 'ventas') {
@@ -2344,9 +2517,10 @@
                 }
                 
                 let estaEnCatalogo = productosGlobales.some(p => p.nombre.trim().toLowerCase() === item.nombre.trim().toLowerCase());
+                let nombreInvAtributo = item.nombre.replace(/"/g, '&quot;');
                 let actionHtml = estaEnCatalogo 
                     ? `<span style="color:var(--primary); font-size:0.8rem; font-weight:bold;">✔️ En catálogo</span>` 
-                    : `<button class="btn-table-action" style="background:var(--primary); color:white; padding:4px 8px; border-radius:5px; font-size:0.85rem; font-weight:bold; cursor:pointer;" onclick="prepararNuevoProducto('${item.nombre}')" title="Crear en el Catálogo">➕ Publicar</button>`;
+                    : `<button class="btn-table-action" style="background:var(--primary); color:white; padding:4px 8px; border-radius:5px; font-size:0.85rem; font-weight:bold; cursor:pointer;" onclick="prepararNuevoProducto(this.getAttribute('data-nombre'))" data-nombre="${nombreInvAtributo}" title="Crear en el Catálogo">➕ Publicar</button>`;
 
                 tbody.innerHTML += `<tr style="${colorFila}"><td><strong>${item.nombre}</strong></td><td>${item.lote}</td><td>${item.vencimiento}</td><td class="text-right" style="font-size:1.1rem; font-weight:bold;">${item.stock}</td><td>${estadoHtml}</td><td style="text-align:center;">${actionHtml}</td></tr>`;
             });
